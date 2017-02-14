@@ -1,8 +1,8 @@
 package events_test
 
 import (
-	"github.com/30x/apid"
-	"github.com/30x/apid/events"
+	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sync/atomic"

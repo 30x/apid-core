@@ -3,7 +3,7 @@ package wrap
 import (
 	"database/sql/driver"
 	"strings"
-	"github.com/30x/apid"
+	"github.com/30x/apid-core"
 	"github.com/mattn/go-sqlite3"
 )
 

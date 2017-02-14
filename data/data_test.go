@@ -2,14 +2,14 @@ package data_test
 
 import (
 	"fmt"
-	"github.com/30x/apid"
+	"github.com/30x/apid-core"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"log"
 	"math/rand"
 	"strconv"
 	"time"
-	"github.com/30x/apid/data"
+	"github.com/30x/apid-core/data"
 	"database/sql"
 )
 

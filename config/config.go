@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/30x/apid"
+	"github.com/30x/apid-core"
 	"github.com/spf13/viper"
 	"log"
 	"strings"

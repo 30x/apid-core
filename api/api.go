@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/30x/apid"
+	"github.com/30x/apid-core"
 	"github.com/gorilla/mux"
 	"net/http"
 	"expvar"

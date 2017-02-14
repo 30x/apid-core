@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/30x/apid"
+	"github.com/30x/apid-core"
 	"github.com/Sirupsen/logrus"
 )
 

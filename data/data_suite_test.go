@@ -5,8 +5,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"testing"
-	"github.com/30x/apid"
-	"github.com/30x/apid/factory"
+	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/factory"
 	"io/ioutil"
 	"os"
 )

@@ -1,12 +1,12 @@
 package factory
 
 import (
-	"github.com/30x/apid"
-	"github.com/30x/apid/api"
-	"github.com/30x/apid/config"
-	"github.com/30x/apid/data"
-	"github.com/30x/apid/events"
-	"github.com/30x/apid/logger"
+	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/api"
+	"github.com/30x/apid-core/config"
+	"github.com/30x/apid-core/data"
+	"github.com/30x/apid-core/events"
+	"github.com/30x/apid-core/logger"
 )
 
 // Don't use values directly - pass to apid.Initialize()

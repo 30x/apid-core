@@ -3,8 +3,8 @@ package data
 import (
 	"database/sql"
 	"fmt"
-	"github.com/30x/apid"
-	"github.com/30x/apid/data/wrap"
+	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/data/wrap"
 	"github.com/mattn/go-sqlite3"
 	"os"
 	"path"
