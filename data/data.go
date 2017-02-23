@@ -3,13 +3,14 @@ package data
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path"
+	"runtime"
+	"sync"
+
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/data/wrap"
 	"github.com/mattn/go-sqlite3"
-	"os"
-	"path"
-	"sync"
-	"runtime"
 )
 
 const (
@@ -119,19 +120,19 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 	}
 
 	log.Infof("LoadDB: %s", dataPath)
-	dataSource := fmt.Sprintf(config.GetString(configDataSourceKey), dataPath)
+	source := fmt.Sprintf(config.GetString(configDataSourceKey), dataPath)
 
 	wrappedDriverName := "dd:" + config.GetString(configDataDriverKey)
-	dataDriver := wrap.WrapDriver{&sqlite3.SQLiteDriver{}, dbTraceLog}
+	driver := wrap.NewDriver(&sqlite3.SQLiteDriver{}, dbTraceLog)
 	func() {
 		// just ignore the "registered twice" panic
 		defer func() {
 			recover()
 		}()
-		sql.Register(wrappedDriverName, &dataDriver)
+		sql.Register(wrappedDriverName, driver)
 	}()
 
-	db, err = sql.Open(wrappedDriverName, dataSource)
+	db, err = sql.Open(wrappedDriverName, source)
 	if err != nil {
 		log.Errorf("error loading db: %s", err)
 		return

@@ -1,14 +1,19 @@
 package wrap
 
 import (
+	"database/sql/driver"
+
+	"sync/atomic"
+
 	"github.com/30x/apid-core"
 	"github.com/mattn/go-sqlite3"
-	"database/sql/driver"
 )
 
 type wrapConn struct {
 	*sqlite3.SQLiteConn
-	log apid.LogService
+	log         apid.LogService
+	stmtCounter int64
+	txCounter   int64
 }
 
 func (c *wrapConn) Swap(cc *sqlite3.SQLiteConn) {
@@ -16,42 +21,46 @@ func (c *wrapConn) Swap(cc *sqlite3.SQLiteConn) {
 }
 
 func (c *wrapConn) Prepare(query string) (driver.Stmt, error) {
-	c.log.Debugf("begin prepare stmt: %s", query)
+	stmtID := atomic.AddInt64(&c.stmtCounter, 1)
+	log := c.log.WithField("stmt", stmtID)
+	log.Debugf("begin prepare stmt: %s", query)
 
 	stmt, err := c.SQLiteConn.Prepare(query)
 	if err != nil {
-		c.log.Errorf("prepare stmt failed: %s", err)
+		log.Errorf("prepare stmt failed: %s", err)
 		return nil, err
 	}
 
-	c.log.Debug("end prepare stmt")
+	log.Debug("end prepare stmt")
 	s := stmt.(*sqlite3.SQLiteStmt)
-	return &wrapStmt{s, c.log}, nil
+	return &wrapStmt{s, log}, nil
 }
 
 func (c *wrapConn) Begin() (driver.Tx, error) {
-	c.log.Debug("begin trans")
+	txID := atomic.AddInt64(&c.txCounter, 1)
+	log := c.log.WithField("tx", txID)
+	log.Debug("begin trans %d", txID)
 
 	tx, err := c.SQLiteConn.Begin()
 	if err != nil {
-		c.log.Errorf("begin trans failed: %s", err)
+		log.Errorf("begin trans failed: %s", err)
 		return nil, err
 	}
 
-	c.log.Debug("end begin trans")
+	log.Debug("end begin trans")
 	t := tx.(*sqlite3.SQLiteTx)
-	return &wrapTx{t, c.log}, nil
+	return &wrapTx{t, log}, nil
 }
 
 func (c *wrapConn) Close() (err error) {
-	c.log.Debug("begin close")
+	c.log.Debug("begin close conn")
 
 	if err = c.SQLiteConn.Close(); err != nil {
-		c.log.Errorf("close failed: %s", err)
+		c.log.Errorf("close conn failed: %s", err)
 		return
 	}
 
-	c.log.Debug("end close")
+	c.log.Debug("end close conn")
 	return
 }
 
