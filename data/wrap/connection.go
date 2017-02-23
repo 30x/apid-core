@@ -39,7 +39,7 @@ func (c *wrapConn) Prepare(query string) (driver.Stmt, error) {
 func (c *wrapConn) Begin() (driver.Tx, error) {
 	txID := atomic.AddInt64(&c.txCounter, 1)
 	log := c.log.WithField("tx", txID)
-	log.Debug("begin trans %d", txID)
+	log.Debug("begin trans")
 
 	tx, err := c.SQLiteConn.Begin()
 	if err != nil {
