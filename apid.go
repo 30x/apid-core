@@ -35,14 +35,14 @@ func Initialize(s Services) {
 	services = ss
 	// order is important
 	ss.config = s.Config()
+	ss.log = s.Log()
 
 	// ensure storage path exists
 	lsp := ss.config.GetString("local_storage_path")
 	if err := os.MkdirAll(lsp, 0700); err != nil {
-		ss.log.Panicf("can't create local storage path %s:%v", lsp, err)
+		ss.log.Panicf("can't create local storage path %s: %v", lsp, err)
 	}
 
-	ss.log = s.Log()
 	ss.events = s.Events()
 	ss.api = s.API()
 	ss.data = s.Data()
