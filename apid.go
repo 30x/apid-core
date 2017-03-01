@@ -1,9 +1,6 @@
 package apid
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
 const (
 	SystemEventsSelector EventSelector = "system event"
@@ -51,13 +48,12 @@ func Initialize(s Services) {
 }
 
 func RegisterPlugin(plugin PluginInitFunc) {
-	fmt.Printf("Registered plugin: %v\n", plugin)
 	pluginInitFuncs = append(pluginInitFuncs, plugin)
 }
 
 func InitializePlugins() {
 	log := Log()
-	log.Debugf("Initializing plugins...")
+	log.Debugf("Initializing %d plugins...", len(pluginInitFuncs))
 	pie := PluginsInitializedEvent{
 		Description: "plugins initialized",
 	}
