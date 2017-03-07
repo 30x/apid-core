@@ -1,21 +1,21 @@
 package api
 
 import (
-	"github.com/30x/apid-core"
-	"github.com/gorilla/mux"
-	"net/http"
 	"expvar"
 	"fmt"
+	"net/http"
+
+	"net"
+
+	"github.com/30x/apid-core"
 	"github.com/30x/goscaffold"
+	"github.com/gorilla/mux"
 )
 
-// todo: handle TLS
-// todo: handle other basic router config, errors, etc.
-
 const (
-	configAPIPort = "api_port"
-	configExpVarPath = "api_expvar_path"
-	configReadyPath = "api_ready"
+	configAPIListen   = "api_listen"
+	configExpVarPath  = "api_expvar_path"
+	configReadyPath   = "api_ready"
 	configHealthyPath = "api_healthy"
 )
 
@@ -27,13 +27,50 @@ func CreateService() apid.APIService {
 	config = apid.Config()
 	log = apid.Log().ForModule("api")
 
-	config.SetDefault(configAPIPort, 9000)
+	config.SetDefault(configAPIListen, "127.0.0.1:9000")
 	config.SetDefault(configReadyPath, "/ready")
 	config.SetDefault(configHealthyPath, "/healthy")
+
+	listen := config.GetString(configAPIListen)
+	h, p, err := net.SplitHostPort(listen)
+	if err != nil {
+		log.Panicf("%s config: err parsing '%s': %v", configAPIListen, listen, err)
+	}
+	var ip net.IP
+	if h != "" {
+		ips, err := net.LookupIP(h)
+		if err != nil {
+			log.Panicf("%s config: unable to resolve IP for '%s': %v", configAPIListen, listen, err)
+		}
+		ip = ips[0]
+	}
+	port, err := net.LookupPort("tcp", p)
+	if err != nil {
+		log.Panicf("%s config: unable to resolve port for '%s': %v", configAPIListen, listen, err)
+	}
+
+	log.Infof("will open api port %d bound to %s", port, ip)
 
 	r := mux.NewRouter()
 	rw := &router{r}
 	scaffold := goscaffold.CreateHTTPScaffold()
+	if ip != nil {
+		scaffold.SetlocalBindIPAddressV4(ip)
+	}
+	scaffold.SetInsecurePort(port)
+	scaffold.CatchSignals()
+
+	// Set an URL that may be used by a load balancer to test if the server is ready to handle requests
+	if config.GetString(configReadyPath) != "" {
+		scaffold.SetReadyPath(config.GetString(configReadyPath))
+	}
+
+	// Set an URL that may be used by infrastructure to test
+	// if the server is working or if it needs to be restarted or replaced
+	if config.GetString(configHealthyPath) != "" {
+		scaffold.SetReadyPath(config.GetString(configHealthyPath))
+	}
+
 	return &service{rw, scaffold}
 }
 
@@ -43,27 +80,6 @@ type service struct {
 }
 
 func (s *service) Listen() error {
-	port := config.GetInt(configAPIPort)
-	log.Infof("opening api port %d", port)
-
-	s.InitExpVar()
-
-	s.scaffold.SetInsecurePort(port)
-
-	// Direct the scaffold to catch common signals and trigger a graceful shutdown.
-	s.scaffold.CatchSignals()
-
-	// Set an URL that may be used by a load balancer to test if the server is ready to handle requests
-	if config.GetString(configReadyPath) != "" {
-		s.scaffold.SetReadyPath(config.GetString(configReadyPath))
-	}
-
-	// Set an URL that may be used by infrastructure to test
-	// if the server is working or if it needs to be restarted or replaced
-	if config.GetString(configHealthyPath) != "" {
-		s.scaffold.SetReadyPath(config.GetString(configHealthyPath))
-	}
-
 	err := s.scaffold.StartListen(s.r)
 	if err != nil {
 		return err
