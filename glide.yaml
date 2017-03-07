@@ -1,4 +1,4 @@
-package: github.com/30x/apid
+package: github.com/30x/apid-core
 import:
 - package: github.com/Sirupsen/logrus
   version: v0.11.0
