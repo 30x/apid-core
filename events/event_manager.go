@@ -13,7 +13,8 @@ type eventManager struct {
 
 func (em *eventManager) Emit(selector apid.EventSelector, event apid.Event) {
 	log.Debugf("emit selector: '%s' event %v: %v", selector, &event, event)
-	if !em.dispatchers[selector].Send(event) {
+	eventDispatcher := em.dispatchers[selector]
+	if (eventDispatcher==nil) || (!eventDispatcher.Send(event)) {
 		em.sendDelivered(selector, event, 0) // in case of no dispatcher
 	}
 }

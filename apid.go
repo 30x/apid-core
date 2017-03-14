@@ -1,9 +1,12 @@
 package apid
 
-import "os"
+import (
+	"os"
+)
 
 const (
 	SystemEventsSelector EventSelector = "system event"
+	ShutdownEventSelector EventSelector = "shutdown event"
 )
 
 var (
@@ -12,6 +15,8 @@ var (
 
 	pluginInitFuncs []PluginInitFunc
 	services        Services
+
+	shutdownChan chan int
 )
 
 type Services interface {
@@ -44,6 +49,8 @@ func Initialize(s Services) {
 	ss.api = s.API()
 	ss.data = s.Data()
 
+	shutdownChan = make(chan int)
+
 	ss.events.Emit(SystemEventsSelector, APIDInitializedEvent)
 }
 
@@ -67,6 +74,24 @@ func InitializePlugins() {
 	Events().Emit(SystemEventsSelector, pie)
 	pluginInitFuncs = nil
 	log.Debugf("done initializing plugins")
+}
+
+func ShutdownPlugins() {
+	Events().EmitWithCallback(ShutdownEventSelector, ShutdownEvent{"apid is going to shutdown"}, ShutdownHandler)
+}
+
+
+func ShutdownHandler(event Event) {
+	log := Log()
+	log.Debugf("shutdown apid")
+	shutdownChan <- 1
+}
+
+/* wait for the shutdown of registered graceful-shutdown plugins, blocking until the required plugins finish shutdown
+ * this is used to prevent the main from exiting
+ */
+func WaitPluginsShutdown() {
+	<- shutdownChan
 }
 
 func AllServices() Services {
@@ -123,4 +148,8 @@ func (s *servicesSet) Log() LogService {
 
 type systemEvent struct {
 	description string
+}
+
+type ShutdownEvent struct {
+	Description string
 }

@@ -6,6 +6,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sync/atomic"
+	"fmt"
+	"strconv"
 )
 
 var _ = Describe("Events Service", func() {
@@ -287,7 +289,74 @@ var _ = Describe("Events Service", func() {
 		apid.InitializePlugins()
 	})
 
+	It("shutdown event should be emitted and listened successfully", func(done Done) {
+		h := func(event apid.Event) {
+			defer GinkgoRecover()
+
+			if pie, ok := event.(apid.ShutdownEvent); ok {
+				apid.Events().Close()
+				Expect(pie.Description).Should(Equal("apid is going to shutdown"))
+				fmt.Println(pie.Description)
+				close(done)
+			} else {
+				Fail("Received wrong event")
+			}
+		}
+		apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
+		shutdownHandler := func(event apid.Event) {}
+		apid.Events().EmitWithCallback(apid.ShutdownEventSelector, apid.ShutdownEvent{"apid is going to shutdown"}, shutdownHandler)
+	})
+
+	It("handlers registered by plugins should execute before apid shutdown", func(done Done) {
+		pluginNum := 10
+		count := make([]int, 1)
+		count[0] = 0
+
+		// create and register plugins, listen to shutdown event
+		for i:=0; i<pluginNum; i++ {
+			apid.RegisterPlugin(createDummyPlugin(i))
+			h := func(event apid.Event) {
+				if pie, ok := event.(apid.ShutdownEvent); ok {
+					Expect(pie.Description).Should(Equal("apid is going to shutdown"))
+					count[0] += 1
+				} else {
+					Fail("Received wrong event")
+				}
+			}
+			apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
+		}
+
+
+		apid.InitializePlugins()
+
+		apid.ShutdownPlugins()
+
+		apid.WaitPluginsShutdown()
+
+		defer GinkgoRecover()
+		apid.Events().Close()
+		// handlers of all registered plugins have executed
+		Expect(count[0]).Should(Equal(pluginNum))
+		fmt.Println("handlers of all registered plugins have executed")
+
+		close(done)
+	})
 })
+
+func createDummyPlugin(id int) apid.PluginInitFunc{
+	xData := make(map[string]interface{})
+	xData["schemaVersion"] = "1.2.3"
+	p := func(s apid.Services) (pd apid.PluginData, err error) {
+		pd = apid.PluginData{
+			Name: "test plugin " + strconv.Itoa(id),
+			Version: "1.0.0",
+			ExtraData: xData,
+		}
+		return
+	}
+	return p
+
+}
 
 type test_handler struct {
 	description string
