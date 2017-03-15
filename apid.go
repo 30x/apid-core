@@ -9,7 +9,7 @@ import (
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
-	ShutdownTimeout       time.Duration = time.Duration(10) * time.Second
+	ShutdownTimeout       time.Duration = 10 * time.Second
 )
 
 var (
