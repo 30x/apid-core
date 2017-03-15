@@ -9,7 +9,7 @@ import (
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
-	ShutdownTimeout       int           = 10
+	ShutdownTimeout       time.Duration = time.Duration(10) * time.Second
 )
 
 var (
@@ -88,7 +88,7 @@ func ShutdownPluginsAndWait() error {
 			}
 		}
 		return errors.New("Emit() problem: wrong event delivered")
-	case <-time.After(time.Duration(ShutdownTimeout) * time.Second):
+	case <-time.After(ShutdownTimeout):
 		return errors.New("Shutdown timeout")
 	}
 }

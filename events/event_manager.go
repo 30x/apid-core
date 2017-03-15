@@ -39,7 +39,12 @@ func (em *eventManager) EmitWithCallback(selector apid.EventSelector, event apid
 	}
 
 	em.Listen(apid.EventDeliveredSelector, handler)
-	if !em.dispatchers[selector].Send(event) {
+
+	em.Lock()
+	dispatch := em.dispatchers[selector]
+	em.Unlock()
+
+	if !dispatch.Send(event) {
 		em.sendDelivered(selector, event, 0) // in case of no dispatcher
 	}
 }
