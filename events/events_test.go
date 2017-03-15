@@ -1,11 +1,13 @@
 package events_test
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync/atomic"
 )
 
 var _ = Describe("Events Service", func() {
@@ -105,13 +107,15 @@ var _ = Describe("Events Service", func() {
 		em := events.CreateService()
 		defer em.Close()
 
+		mut := sync.Mutex{}
 		hitH1 := false
 		hitH2 := false
 		h1 := test_handler{
 			"handler 1",
 			func(event apid.Event) {
 				defer GinkgoRecover()
-
+				mut.Lock()
+				defer mut.Unlock()
 				hitH1 = true
 				if hitH1 && hitH2 {
 					em.Close()
@@ -124,6 +128,8 @@ var _ = Describe("Events Service", func() {
 			func(event apid.Event) {
 				defer GinkgoRecover()
 
+				mut.Lock()
+				defer mut.Unlock()
 				hitH2 = true
 				if hitH1 && hitH2 {
 					em.Close()
@@ -258,8 +264,8 @@ var _ = Describe("Events Service", func() {
 		xData["schemaVersion"] = "1.2.3"
 		p := func(s apid.Services) (pd apid.PluginData, err error) {
 			pd = apid.PluginData{
-				Name: "test plugin",
-				Version: "1.0.0",
+				Name:      "test plugin",
+				Version:   "1.0.0",
 				ExtraData: xData,
 			}
 			return
