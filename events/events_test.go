@@ -336,7 +336,6 @@ var _ = Describe("Events Service", func() {
 		// handlers of all registered plugins have executed
 		Expect(count).Should(Equal(int32(pluginNum)))
 
-		fmt.Println("handlers of all registered plugins have executed")
 		close(done)
 	})
 })
