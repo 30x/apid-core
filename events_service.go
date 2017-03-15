@@ -11,10 +11,9 @@ type EventHandler interface {
 type EventHandlerFunc func(event Event)
 
 type EventsService interface {
-	/* publish an event to the selector.
-	It will send a copy of the delivered event to the returned channel, after all listeners have responded to the event.
-	Call "Emit()" for non-blocking, "<-Emit()" for blocking.
-	*/
+	// Publish an event to the selector.
+	// It will send a copy of the delivered event to the returned channel, after all listeners have responded to the event.
+	// Call "Emit()" for non-blocking, "<-Emit()" for blocking.
 	Emit(selector EventSelector, event Event) chan Event
 
 	// publish an event to the selector, call the passed handler when all listeners have responded to the event

@@ -1,12 +1,15 @@
 package apid
 
 import (
+	"errors"
 	"os"
+	"time"
 )
 
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
+	ShutdownTimeout       int           = 10
 )
 
 var (
@@ -15,8 +18,6 @@ var (
 
 	pluginInitFuncs []PluginInitFunc
 	services        Services
-
-	shutdownChan chan int
 )
 
 type Services interface {
@@ -49,8 +50,6 @@ func Initialize(s Services) {
 	ss.api = s.API()
 	ss.data = s.Data()
 
-	shutdownChan = make(chan int)
-
 	ss.events.Emit(SystemEventsSelector, APIDInitializedEvent)
 }
 
@@ -76,21 +75,22 @@ func InitializePlugins() {
 	log.Debugf("done initializing plugins")
 }
 
-func ShutdownPlugins() {
-	Events().EmitWithCallback(ShutdownEventSelector, ShutdownEvent{"apid is going to shutdown"}, shutdownHandler)
-}
-
-func shutdownHandler(event Event) {
-	log := Log()
-	log.Debugf("shutdown apid")
-	shutdownChan <- 1
-}
-
-/* wait for the shutdown of registered graceful-shutdown plugins, blocking until the required plugins finish shutdown
- * this is used to prevent the main from exiting
- */
-func WaitPluginsShutdown() {
-	<-shutdownChan
+// Shutdown all the plugins that have registered for ShutdownEventSelector.
+// This call will block until either all required plugins shutdown, or a timeout occurred.
+func ShutdownPluginsAndWait() error {
+	shutdownEvent := ShutdownEvent{"apid is going to shutdown"}
+	eventChan := Events().Emit(ShutdownEventSelector, shutdownEvent)
+	select {
+	case event := <-eventChan:
+		if e, ok := event.(ShutdownEvent); ok {
+			if e == shutdownEvent {
+				return nil
+			}
+		}
+		return errors.New("Emit() problem: wrong event delivered")
+	case <-time.After(time.Duration(ShutdownTimeout) * time.Second):
+		return errors.New("Shutdown timeout")
+	}
 }
 
 func AllServices() Services {
