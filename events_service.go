@@ -11,8 +11,11 @@ type EventHandler interface {
 type EventHandlerFunc func(event Event)
 
 type EventsService interface {
-	// publish an event to the selector
-	Emit(selector EventSelector, event Event)
+	/* publish an event to the selector.
+	It will send a copy of the delivered event to the returned channel, after all listeners have responded to the event.
+	Call "Emit()" for non-blocking, "<-Emit()" for blocking.
+	*/
+	Emit(selector EventSelector, event Event) chan Event
 
 	// publish an event to the selector, call the passed handler when all listeners have responded to the event
 	EmitWithCallback(selector EventSelector, event Event, handler EventHandlerFunc)
@@ -42,13 +45,15 @@ type EventDeliveryEvent struct {
 	Count       int
 }
 
+// use reflect.DeepEqual to compare this type
 type PluginsInitializedEvent struct {
 	Description string
+	// using slice member will make the type "PluginsInitializedEvent" uncomparable
 	Plugins []PluginData
 }
 
 type PluginData struct {
-	Name string
-	Version string
+	Name      string
+	Version   string
 	ExtraData map[string]interface{}
 }

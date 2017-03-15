@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	SystemEventsSelector EventSelector = "system event"
+	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
 )
 
@@ -77,11 +77,10 @@ func InitializePlugins() {
 }
 
 func ShutdownPlugins() {
-	Events().EmitWithCallback(ShutdownEventSelector, ShutdownEvent{"apid is going to shutdown"}, ShutdownHandler)
+	Events().EmitWithCallback(ShutdownEventSelector, ShutdownEvent{"apid is going to shutdown"}, shutdownHandler)
 }
 
-
-func ShutdownHandler(event Event) {
+func shutdownHandler(event Event) {
 	log := Log()
 	log.Debugf("shutdown apid")
 	shutdownChan <- 1
@@ -91,7 +90,7 @@ func ShutdownHandler(event Event) {
  * this is used to prevent the main from exiting
  */
 func WaitPluginsShutdown() {
-	<- shutdownChan
+	<-shutdownChan
 }
 
 func AllServices() Services {

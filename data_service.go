@@ -16,7 +16,7 @@ type DataService interface {
 }
 
 type DB interface {
-	Ping() (error)
+	Ping() error
 	Prepare(query string) (*sql.Stmt, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
