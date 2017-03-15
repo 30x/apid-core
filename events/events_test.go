@@ -309,8 +309,7 @@ var _ = Describe("Events Service", func() {
 
 	It("handlers registered by plugins should execute before apid shutdown", func(done Done) {
 		pluginNum := 10
-		count := make([]int, 1)
-		count[0] = 0
+		count := int32(0)
 
 		// create and register plugins, listen to shutdown event
 		for i:=0; i<pluginNum; i++ {
@@ -318,7 +317,7 @@ var _ = Describe("Events Service", func() {
 			h := func(event apid.Event) {
 				if pie, ok := event.(apid.ShutdownEvent); ok {
 					Expect(pie.Description).Should(Equal("apid is going to shutdown"))
-					count[0] += 1
+					atomic.AddInt32(&count, 1)
 				} else {
 					Fail("Received wrong event")
 				}
@@ -329,16 +328,15 @@ var _ = Describe("Events Service", func() {
 
 		apid.InitializePlugins()
 
-		apid.ShutdownPlugins()
-
-		apid.WaitPluginsShutdown()
+		apid.ShutdownPluginsAndWait()
 
 		defer GinkgoRecover()
 		apid.Events().Close()
-		// handlers of all registered plugins have executed
-		Expect(count[0]).Should(Equal(pluginNum))
-		fmt.Println("handlers of all registered plugins have executed")
 
+		// handlers of all registered plugins have executed
+		Expect(count).Should(Equal(int32(pluginNum)))
+
+		fmt.Println("handlers of all registered plugins have executed")
 		close(done)
 	})
 })

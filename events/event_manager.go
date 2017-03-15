@@ -3,6 +3,7 @@ package events
 import (
 	"github.com/30x/apid-core"
 	"sync"
+	"reflect"
 )
 
 // events published to a given channel are processed entirely in order, though delivery to listeners is async
@@ -11,12 +12,14 @@ type eventManager struct {
 	dispatchers map[apid.EventSelector]*dispatcher
 }
 
-func (em *eventManager) Emit(selector apid.EventSelector, event apid.Event) {
+func (em *eventManager) Emit(selector apid.EventSelector, event apid.Event) chan apid.Event {
+
 	log.Debugf("emit selector: '%s' event %v: %v", selector, &event, event)
-	eventDispatcher := em.dispatchers[selector]
-	if (eventDispatcher==nil) || (!eventDispatcher.Send(event)) {
-		em.sendDelivered(selector, event, 0) // in case of no dispatcher
-	}
+	responseChannel := make(chan apid.Event, 1)
+	em.EmitWithCallback(selector, event, func(event apid.Event) {
+		responseChannel <- event
+	})
+	return responseChannel
 }
 
 func (em *eventManager) EmitWithCallback(selector apid.EventSelector, event apid.Event, callback apid.EventHandlerFunc) {
@@ -25,7 +28,7 @@ func (em *eventManager) EmitWithCallback(selector apid.EventSelector, event apid
 	handler := &funcWrapper{em, nil}
 	handler.HandlerFunc = func(e apid.Event) {
 		if ede, ok := e.(apid.EventDeliveryEvent); ok {
-			if ede.Event == event {
+			if reflect.DeepEqual(ede.Event, event) {
 				em.StopListening(apid.EventDeliveredSelector, handler)
 				callback(e)
 			}
@@ -33,7 +36,9 @@ func (em *eventManager) EmitWithCallback(selector apid.EventSelector, event apid
 	}
 
 	em.Listen(apid.EventDeliveredSelector, handler)
-	em.Emit(selector, event)
+	if !em.dispatchers[selector].Send(event) {
+		em.sendDelivered(selector, event, 0) // in case of no dispatcher
+	}
 }
 
 func (em *eventManager) HasListeners(selector apid.EventSelector) bool {
