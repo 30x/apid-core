@@ -4,8 +4,10 @@ import (
 	"github.com/30x/apid-core"
 	"github.com/spf13/viper"
 	"log"
-	"strings"
 	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -22,39 +24,106 @@ const (
 	defaultConfigPath     = "."
 )
 
-var cfg *viper.Viper
+var configlock sync.Mutex
+
+type ConfigMgr struct {
+	sync.Mutex
+	vcfg *viper.Viper
+}
+
+// Wrapper function to make the viper calls thread safe
+var cfg *ConfigMgr
+
+func (c *ConfigMgr) SetDefault(key string, value interface{}) {
+	c.Lock()
+	c.vcfg.SetDefault(key, value)
+	c.Unlock()
+}
+
+func (c *ConfigMgr) Set(key string, value interface{}) {
+	c.Lock()
+	c.vcfg.Set(key, value)
+	c.Unlock()
+}
+
+func (c *ConfigMgr) Get(key string) interface{} {
+	c.Lock()
+	defer c.Unlock()
+	return c.vcfg.Get(key)
+}
+
+func (c *ConfigMgr) GetBool(key string) bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.vcfg.GetBool(key)
+}
+
+func (c *ConfigMgr) GetFloat64(key string) float64 {
+	c.Lock()
+	defer c.Unlock()
+	return c.vcfg.GetFloat64(key)
+}
+
+func (c *ConfigMgr) GetInt(key string) int {
+	c.Lock()
+	defer c.Unlock()
+	return c.vcfg.GetInt(key)
+}
+
+func (c *ConfigMgr) GetString(key string) string {
+	cfg.Lock()
+	defer cfg.Unlock()
+	return c.vcfg.GetString(key)
+}
+
+func (c *ConfigMgr) GetDuration(key string) time.Duration {
+	cfg.Lock()
+	defer cfg.Unlock()
+	return c.vcfg.GetDuration(key)
+}
+
+func (c *ConfigMgr) IsSet(key string) bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.vcfg.IsSet(key)
+}
 
 func GetConfig() apid.ConfigService {
+	configlock.Lock()
+	defer configlock.Unlock()
 	if cfg == nil {
 
-		cfg = viper.New()
+		vcfg := viper.New()
 
 		// for config file search path
-		cfg.SetConfigType(configFileType)
+		vcfg.SetConfigType(configFileType)
 
-		cfg.SetDefault(configPathKey, defaultConfigPath)
-		configFilePath := cfg.GetString(configPathKey)
-		cfg.AddConfigPath(configFilePath)
+		vcfg.SetDefault(configPathKey, defaultConfigPath)
+		configFilePath := vcfg.GetString(configPathKey)
+		vcfg.AddConfigPath(configFilePath)
 
-		cfg.SetDefault(configFileNameKey, defaultConfigFilename)
-		configFileName := cfg.GetString(configFileNameKey)
+		vcfg.SetDefault(configFileNameKey, defaultConfigFilename)
+		configFileName := vcfg.GetString(configFileNameKey)
 		configFileName = strings.TrimSuffix(configFileName, ".yaml")
-		cfg.SetConfigName(configFileName)
+		vcfg.SetConfigName(configFileName)
 
 		// for user-specified absolute config file
-		configFile, ok := os.LookupEnv(configFileEnvVar); if ok {
-			cfg.SetConfigFile(configFile)
+		configFile, ok := os.LookupEnv(configFileEnvVar)
+		if ok {
+			vcfg.SetConfigFile(configFile)
 		}
 
-		cfg.SetDefault(localStoragePathKey, localStoragePathDefault)
+		vcfg.SetDefault(localStoragePathKey, localStoragePathDefault)
 
-		err := cfg.ReadInConfig()
+		err := vcfg.ReadInConfig()
 		if err != nil {
 			log.Printf("Error in config file '%s': %s", configFileNameKey, err)
 		}
 
-		cfg.SetEnvPrefix("apid") // eg. env var "APID_SOMETHING" will bind to config var "something"
-		cfg.AutomaticEnv()
+		vcfg.SetEnvPrefix("apid") // eg. env var "APID_SOMETHING" will bind to config var "something"
+		vcfg.AutomaticEnv()
+
+		cfg = &ConfigMgr{vcfg: vcfg}
 	}
 	return cfg
 }
