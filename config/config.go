@@ -24,6 +24,8 @@ const (
 	defaultConfigPath     = "."
 )
 
+var configlock sync.Mutex
+
 type ConfigMgr struct {
 	sync.Mutex
 	vcfg *viper.Viper
@@ -87,6 +89,8 @@ func (c *ConfigMgr) IsSet(key string) bool {
 }
 
 func GetConfig() apid.ConfigService {
+	configlock.Lock()
+	defer configlock.Unlock()
 	if cfg == nil {
 
 		vcfg := viper.New()
