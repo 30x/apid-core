@@ -1,9 +1,15 @@
 package apid
 
-import "os"
+import (
+	"errors"
+	"os"
+	"time"
+)
 
 const (
-	SystemEventsSelector EventSelector = "system event"
+	SystemEventsSelector  EventSelector = "system event"
+	ShutdownEventSelector EventSelector = "shutdown event"
+	ShutdownTimeout       time.Duration = 10 * time.Second
 )
 
 var (
@@ -69,6 +75,24 @@ func InitializePlugins() {
 	log.Debugf("done initializing plugins")
 }
 
+// Shutdown all the plugins that have registered for ShutdownEventSelector.
+// This call will block until either all required plugins shutdown, or a timeout occurred.
+func ShutdownPluginsAndWait() error {
+	shutdownEvent := ShutdownEvent{"apid is going to shutdown"}
+	eventChan := Events().Emit(ShutdownEventSelector, shutdownEvent)
+	select {
+	case event := <-eventChan:
+		if e, ok := event.(ShutdownEvent); ok {
+			if e == shutdownEvent {
+				return nil
+			}
+		}
+		return errors.New("Emit() problem: wrong event delivered")
+	case <-time.After(ShutdownTimeout):
+		return errors.New("Shutdown timeout")
+	}
+}
+
 func AllServices() Services {
 	return services
 }
@@ -123,4 +147,8 @@ func (s *servicesSet) Log() LogService {
 
 type systemEvent struct {
 	description string
+}
+
+type ShutdownEvent struct {
+	Description string
 }

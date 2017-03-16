@@ -1,11 +1,16 @@
 package events_test
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync/atomic"
+
+	"fmt"
+	"strconv"
 )
 
 var _ = Describe("Events Service", func() {
@@ -105,13 +110,15 @@ var _ = Describe("Events Service", func() {
 		em := events.CreateService()
 		defer em.Close()
 
+		mut := sync.Mutex{}
 		hitH1 := false
 		hitH2 := false
 		h1 := test_handler{
 			"handler 1",
 			func(event apid.Event) {
 				defer GinkgoRecover()
-
+				mut.Lock()
+				defer mut.Unlock()
 				hitH1 = true
 				if hitH1 && hitH2 {
 					em.Close()
@@ -124,6 +131,8 @@ var _ = Describe("Events Service", func() {
 			func(event apid.Event) {
 				defer GinkgoRecover()
 
+				mut.Lock()
+				defer mut.Unlock()
 				hitH2 = true
 				if hitH1 && hitH2 {
 					em.Close()
@@ -258,8 +267,8 @@ var _ = Describe("Events Service", func() {
 		xData["schemaVersion"] = "1.2.3"
 		p := func(s apid.Services) (pd apid.PluginData, err error) {
 			pd = apid.PluginData{
-				Name: "test plugin",
-				Version: "1.0.0",
+				Name:      "test plugin",
+				Version:   "1.0.0",
 				ExtraData: xData,
 			}
 			return
@@ -287,7 +296,71 @@ var _ = Describe("Events Service", func() {
 		apid.InitializePlugins()
 	})
 
+	It("shutdown event should be emitted and listened successfully", func(done Done) {
+		h := func(event apid.Event) {
+			defer GinkgoRecover()
+
+			if pie, ok := event.(apid.ShutdownEvent); ok {
+				apid.Events().Close()
+				Expect(pie.Description).Should(Equal("apid is going to shutdown"))
+				fmt.Println(pie.Description)
+				close(done)
+			} else {
+				Fail("Received wrong event")
+			}
+		}
+		apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
+		shutdownHandler := func(event apid.Event) {}
+		apid.Events().EmitWithCallback(apid.ShutdownEventSelector, apid.ShutdownEvent{"apid is going to shutdown"}, shutdownHandler)
+	})
+
+	It("handlers registered by plugins should execute before apid shutdown", func(done Done) {
+		pluginNum := 10
+		count := int32(0)
+
+		// create and register plugins, listen to shutdown event
+		for i:=0; i<pluginNum; i++ {
+			apid.RegisterPlugin(createDummyPlugin(i))
+			h := func(event apid.Event) {
+				if pie, ok := event.(apid.ShutdownEvent); ok {
+					Expect(pie.Description).Should(Equal("apid is going to shutdown"))
+					atomic.AddInt32(&count, 1)
+				} else {
+					Fail("Received wrong event")
+				}
+			}
+			apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
+		}
+
+
+		apid.InitializePlugins()
+
+		apid.ShutdownPluginsAndWait()
+
+		defer GinkgoRecover()
+		apid.Events().Close()
+
+		// handlers of all registered plugins have executed
+		Expect(count).Should(Equal(int32(pluginNum)))
+
+		close(done)
+	})
 })
+
+func createDummyPlugin(id int) apid.PluginInitFunc{
+	xData := make(map[string]interface{})
+	xData["schemaVersion"] = "1.2.3"
+	p := func(s apid.Services) (pd apid.PluginData, err error) {
+		pd = apid.PluginData{
+			Name: "test plugin " + strconv.Itoa(id),
+			Version: "1.0.0",
+			ExtraData: xData,
+		}
+		return
+	}
+	return p
+
+}
 
 type test_handler struct {
 	description string
