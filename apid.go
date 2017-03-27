@@ -50,6 +50,8 @@ func Initialize(s Services) {
 	ss.api = s.API()
 	ss.data = s.Data()
 
+	pluginInitFuncs = make([]PluginInitFunc, 1)
+
 	ss.events.Emit(SystemEventsSelector, APIDInitializedEvent)
 }
 
