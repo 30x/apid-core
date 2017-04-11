@@ -86,7 +86,7 @@ func (d *dataService) ReleaseDB(id, version string) {
 	db := dbMap[versionedID]
 	if db != nil {
 		dbMap[versionedID] = nil
-		log.Errorf("SETTING FINALIZER")
+		log.Warn("SETTING FINALIZER")
 		finalizer := Delete(versionedID)
 		runtime.SetFinalizer(db, finalizer)
 	}

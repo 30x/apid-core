@@ -12,7 +12,7 @@ import (
 const (
 	configLevel = "log_level"
 
-	defaultLevel = logrus.DebugLevel
+	defaultLevel = logrus.ErrorLevel
 
 	moduleField      = "module"
 	environmentField = "env"
