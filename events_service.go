@@ -48,7 +48,8 @@ type EventDeliveryEvent struct {
 type PluginsInitializedEvent struct {
 	Description string
 	// using slice member will make the type "PluginsInitializedEvent" uncomparable
-	Plugins []PluginData
+	Plugins     []PluginData
+	ApidVersion string
 }
 
 type PluginData struct {

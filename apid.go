@@ -2,6 +2,7 @@ package apid
 
 import (
 	"errors"
+	"github.com/30x/apid-core/version"
 	"os"
 	"time"
 )
@@ -62,6 +63,7 @@ func InitializePlugins() {
 	log.Debugf("Initializing %d plugins...", len(pluginInitFuncs))
 	pie := PluginsInitializedEvent{
 		Description: "plugins initialized",
+		ApidVersion: version.VERSION_NUMBER,
 	}
 	for _, pif := range pluginInitFuncs {
 		pluginData, err := pif(services)
