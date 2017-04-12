@@ -2,7 +2,6 @@ package apid
 
 import (
 	"errors"
-	"github.com/30x/apid-core/version"
 	"os"
 	"time"
 )
@@ -58,12 +57,12 @@ func RegisterPlugin(plugin PluginInitFunc) {
 	pluginInitFuncs = append(pluginInitFuncs, plugin)
 }
 
-func InitializePlugins() {
+func InitializePlugins(versionNumber string) {
 	log := Log()
 	log.Debugf("Initializing %d plugins...", len(pluginInitFuncs))
 	pie := PluginsInitializedEvent{
 		Description: "plugins initialized",
-		ApidVersion: version.VERSION_NUMBER,
+		ApidVersion: versionNumber,
 	}
 	for _, pif := range pluginInitFuncs {
 		pluginData, err := pif(services)

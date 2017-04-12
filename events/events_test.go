@@ -293,7 +293,7 @@ var _ = Describe("Events Service", func() {
 		}
 		apid.Events().ListenFunc(apid.SystemEventsSelector, h)
 
-		apid.InitializePlugins()
+		apid.InitializePlugins("")
 	})
 
 	It("shutdown event should be emitted and listened successfully", func(done Done) {
@@ -333,7 +333,7 @@ var _ = Describe("Events Service", func() {
 		}
 
 
-		apid.InitializePlugins()
+		apid.InitializePlugins("")
 
 		apid.ShutdownPluginsAndWait()
 
