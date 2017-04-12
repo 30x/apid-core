@@ -293,7 +293,7 @@ var _ = Describe("Events Service", func() {
 		}
 		apid.Events().ListenFunc(apid.SystemEventsSelector, h)
 
-		apid.InitializePlugins()
+		apid.InitializePlugins("")
 	})
 
 	It("shutdown event should be emitted and listened successfully", func(done Done) {
@@ -333,7 +333,7 @@ var _ = Describe("Events Service", func() {
 		}
 
 
-		apid.InitializePlugins()
+		apid.InitializePlugins("")
 
 		apid.ShutdownPluginsAndWait()
 
@@ -344,6 +344,36 @@ var _ = Describe("Events Service", func() {
 		Expect(count).Should(Equal(int32(pluginNum)))
 
 		close(done)
+	})
+
+	It("should be able to read apid version from PluginsInitialized event", func(done Done) {
+		xData := make(map[string]interface{})
+		xData["schemaVersion"] = "1.2.3"
+		p := func(s apid.Services) (pd apid.PluginData, err error) {
+			pd = apid.PluginData{
+				Name:      "test plugin",
+				Version:   "1.0.0",
+				ExtraData: xData,
+			}
+			return
+		}
+		apid.RegisterPlugin(p)
+
+		apidVersion := "dummy_version"
+
+		h := func(event apid.Event) {
+			defer GinkgoRecover()
+
+			if pie, ok := event.(apid.PluginsInitializedEvent); ok {
+
+				apid.Events().Close()
+				Expect(pie.ApidVersion).To(Equal(apidVersion))
+				close(done)
+			}
+		}
+		apid.Events().ListenFunc(apid.SystemEventsSelector, h)
+
+		apid.InitializePlugins(apidVersion)
 	})
 })
 
