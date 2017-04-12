@@ -345,6 +345,36 @@ var _ = Describe("Events Service", func() {
 
 		close(done)
 	})
+
+	It("should be able to read apid version from PluginsInitialized event", func(done Done) {
+		xData := make(map[string]interface{})
+		xData["schemaVersion"] = "1.2.3"
+		p := func(s apid.Services) (pd apid.PluginData, err error) {
+			pd = apid.PluginData{
+				Name:      "test plugin",
+				Version:   "1.0.0",
+				ExtraData: xData,
+			}
+			return
+		}
+		apid.RegisterPlugin(p)
+
+		apidVersion := "dummy_version"
+
+		h := func(event apid.Event) {
+			defer GinkgoRecover()
+
+			if pie, ok := event.(apid.PluginsInitializedEvent); ok {
+
+				apid.Events().Close()
+				Expect(pie.ApidVersion).To(Equal(apidVersion))
+				close(done)
+			}
+		}
+		apid.Events().ListenFunc(apid.SystemEventsSelector, h)
+
+		apid.InitializePlugins(apidVersion)
+	})
 })
 
 func createDummyPlugin(id int) apid.PluginInitFunc{
