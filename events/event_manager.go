@@ -115,6 +115,8 @@ func (em *eventManager) sendDelivered(selector apid.EventSelector, event apid.Ev
 			Event:       event,
 			Count:       count,
 		}
+		em.Lock()
+		defer em.Unlock()
 		em.dispatchers[apid.EventDeliveredSelector].Send(ede)
 	}
 }
@@ -160,6 +162,10 @@ func (d *dispatcher) Close() {
 
 func (d *dispatcher) Send(e apid.Event) bool {
 	if d != nil {
+		defer func() {
+			err := recover()
+			log.Debugf("Send %v failed: %v", e, err)
+		}()
 		d.channel <- e
 		return true
 	}
