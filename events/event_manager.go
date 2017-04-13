@@ -115,6 +115,8 @@ func (em *eventManager) sendDelivered(selector apid.EventSelector, event apid.Ev
 			Event:       event,
 			Count:       count,
 		}
+		em.Lock()
+		defer em.Unlock()
 		em.dispatchers[apid.EventDeliveredSelector].Send(ede)
 	}
 }
@@ -128,6 +130,9 @@ type dispatcher struct {
 }
 
 func (d *dispatcher) Add(h apid.EventHandler) {
+	if d == nil {
+		return
+	}
 	d.Lock()
 	defer d.Unlock()
 	if d.handlers == nil {
@@ -143,6 +148,9 @@ func (d *dispatcher) Add(h apid.EventHandler) {
 }
 
 func (d *dispatcher) Remove(h apid.EventHandler) {
+	if d == nil {
+		return
+	}
 	d.Lock()
 	defer d.Unlock()
 	for i := len(d.handlers) - 1; i >= 0; i-- {
@@ -155,24 +163,38 @@ func (d *dispatcher) Remove(h apid.EventHandler) {
 }
 
 func (d *dispatcher) Close() {
+	if d == nil {
+		return
+	}
 	close(d.channel)
 }
 
 func (d *dispatcher) Send(e apid.Event) bool {
-	if d != nil {
-		d.channel <- e
-		return true
+	if d == nil {
+		return false
 	}
-	return false
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warnf("Send %v failed: %v", e, err)
+		}
+	}()
+	d.channel <- e
+	return true
 }
 
 func (d *dispatcher) HasHandlers() bool {
+	if d == nil {
+		return false
+	}
 	d.Lock()
 	defer d.Unlock()
 	return d != nil && len(d.handlers) > 0
 }
 
 func (d *dispatcher) startDelivery() {
+	if d == nil {
+		return
+	}
 	go func() {
 		for {
 			select {
