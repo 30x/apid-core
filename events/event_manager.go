@@ -163,8 +163,9 @@ func (d *dispatcher) Close() {
 func (d *dispatcher) Send(e apid.Event) bool {
 	if d != nil {
 		defer func() {
-			err := recover()
-			log.Debugf("Send %v failed: %v", e, err)
+			if err := recover(); err != nil {
+				log.Warnf("Send %v failed: %v", e, err)
+			}
 		}()
 		d.channel <- e
 		return true
