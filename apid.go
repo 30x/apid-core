@@ -71,8 +71,8 @@ func InitializePlugins(versionNumber string) {
 		}
 		pie.Plugins = append(pie.Plugins, pluginData)
 	}
-	Events().Emit(SystemEventsSelector, pie)
 	pluginInitFuncs = nil
+	Events().Emit(SystemEventsSelector, pie)
 	log.Debugf("done initializing plugins")
 }
 

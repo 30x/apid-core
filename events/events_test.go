@@ -290,19 +290,19 @@ var _ = Describe("Events Service", func() {
 
 				if pie, ok := event.(apid.ShutdownEvent); ok {
 					Expect(pie.Description).Should(Equal("apid is going to shutdown"))
-					close(done)
 				} else {
 					Fail("Received wrong event")
 				}
 			}
 			apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
-			shutdownHandler := func(event apid.Event) {}
-			apid.Events().EmitWithCallback(apid.ShutdownEventSelector, apid.ShutdownEvent{"apid is going to shutdown"}, shutdownHandler)
+			<- apid.Events().Emit(apid.ShutdownEventSelector, apid.ShutdownEvent{"apid is going to shutdown"})
+			close(done)
 		})
 
 		It("handlers registered by plugins should execute before apid shutdown", func(done Done) {
 			pluginNum := 10
 			count := int32(0)
+			countP := &count
 
 			// create and register plugins, listen to shutdown event
 			for i:=0; i<pluginNum; i++ {
@@ -310,7 +310,7 @@ var _ = Describe("Events Service", func() {
 				h := func(event apid.Event) {
 					if pie, ok := event.(apid.ShutdownEvent); ok {
 						Expect(pie.Description).Should(Equal("apid is going to shutdown"))
-						atomic.AddInt32(&count, 1)
+						atomic.AddInt32(countP, 1)
 					} else {
 						Fail("Received wrong event")
 					}
