@@ -9,3 +9,4 @@ vendor
 *.iml
 .idea
 artillery_report_*
+*.lock
