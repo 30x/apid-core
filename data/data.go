@@ -17,23 +17,23 @@ package data
 import (
 	"database/sql"
 	"fmt"
-	"time"
+	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/data/wrap"
+	"github.com/mattn/go-sqlite3"
 	"os"
 	"path"
 	"runtime"
 	"sync"
-	"github.com/30x/apid-core"
-	"github.com/30x/apid-core/data/wrap"
-	"github.com/mattn/go-sqlite3"
+	"time"
 )
 
 const (
-	configDataDriverKey = "data_driver"
-	configDataSourceKey = "data_source"
-	configDataPathKey   = "data_path"
+	configDataDriverKey    = "data_driver"
+	configDataSourceKey    = "data_source"
+	configDataPathKey      = "data_path"
 	statCollectionInterval = 10
-	commonDBID      = "common"
-	commonDBVersion = "base"
+	commonDBID             = "common"
+	commonDBVersion        = "base"
 
 	defaultTraceLevel = "warn"
 )
