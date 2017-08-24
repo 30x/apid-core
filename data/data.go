@@ -207,6 +207,6 @@ func DBPath(id string) string {
 func printDBStatsInfo(db *sql.DB, versionedId string) {
 	tick := time.Duration(statCollectionInterval * time.Second)
 	for _ = range time.Tick(tick) {
-		log.Debugf("Current number of open DB for ver {%s} is {%d}", versionedId, db.Stats().OpenConnections)
+		log.Debugf("Current number of open DB connections for ver {%s} is {%d}", versionedId, db.Stats().OpenConnections)
 	}
 }
