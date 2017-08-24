@@ -17,11 +17,11 @@ package data
 import (
 	"database/sql"
 	"fmt"
+	"time"
 	"os"
 	"path"
 	"runtime"
 	"sync"
-
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/data/wrap"
 	"github.com/mattn/go-sqlite3"
@@ -31,7 +31,7 @@ const (
 	configDataDriverKey = "data_driver"
 	configDataSourceKey = "data_source"
 	configDataPathKey   = "data_path"
-
+	statCollectionInterval = 10
 	commonDBID      = "common"
 	commonDBVersion = "base"
 
@@ -171,7 +171,10 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 		log.Errorf("error enabling foreign_keys: %s", err)
 		return
 	}
-
+	dbLvl := config.GetString("log_level")
+	if dbLvl == "Debug" {
+		go printDBStatsInfo(db, versionedID)
+	}
 	dbMap[versionedID] = db
 	return
 }
@@ -199,4 +202,11 @@ func DBPath(id string) string {
 	storagePath := config.GetString("local_storage_path")
 	relativeDataPath := config.GetString(configDataPathKey)
 	return path.Join(storagePath, relativeDataPath, id, "sqlite3")
+}
+
+func printDBStatsInfo(db *sql.DB, versionedId string) {
+	tick := time.Duration(statCollectionInterval * time.Second)
+	for _ = range time.Tick(tick) {
+		log.Debugf("Current number of open DB for ver {%s} is {%d}", versionedId, db.Stats().OpenConnections)
+	}
 }
