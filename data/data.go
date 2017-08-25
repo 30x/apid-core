@@ -46,7 +46,7 @@ var log, dbTraceLog apid.LogService
 var config apid.ConfigService
 
 type dbMapInfo struct {
-	db *sql.DB
+	db     *sql.DB
 	closed chan bool
 }
 
@@ -107,7 +107,7 @@ func (d *dataService) ReleaseDB(id, version string) {
 	defer dbMapSync.Unlock()
 
 	dbm := dbMap[versionedID]
-	if dbm.db != nil {
+	if dbm != nil && dbm.db != nil {
 		if strings.EqualFold(config.GetString(logger.ConfigLevel), logrus.DebugLevel.String()) {
 			dbm.closed <- true
 		}
@@ -182,14 +182,14 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 		return
 	}
 	if strings.EqualFold(config.GetString(logger.ConfigLevel),
-			logrus.DebugLevel.String()) {
+		logrus.DebugLevel.String()) {
 		stoplogchan = logDBInfo(versionedID, db)
 	}
 
 	db.SetMaxOpenConns(config.GetInt(api.ConfigDBMaxConns))
 	db.SetMaxIdleConns(config.GetInt(api.ConfigDBIdleConns))
 	db.SetConnMaxLifetime(time.Duration(config.GetInt(api.ConfigDBConnsTimeout)) * time.Second)
-	dbInfo := dbMapInfo {db: db, closed: stoplogchan}
+	dbInfo := dbMapInfo{db: db, closed: stoplogchan}
 	dbMap[versionedID] = &dbInfo
 	return
 }
@@ -235,4 +235,3 @@ func logDBInfo(versionedId string, db *sql.DB) chan bool {
 	}()
 	return stop
 }
-
