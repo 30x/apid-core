@@ -18,11 +18,15 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/api"
 	"github.com/30x/apid-core/data/wrap"
+	"github.com/30x/apid-core/logger"
+	"github.com/Sirupsen/logrus"
 	"github.com/mattn/go-sqlite3"
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -171,10 +175,14 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 		log.Errorf("error enabling foreign_keys: %s", err)
 		return
 	}
-	dbLvl := config.GetString("log_level")
-	if dbLvl == "Debug" {
+	dbLvl := config.GetString(logger.ConfigLevel)
+	if strings.EqualFold(dbLvl, logrus.DebugLevel.String()) {
 		go printDBStatsInfo(db, versionedID)
 	}
+
+	db.SetMaxOpenConns(config.GetInt(api.ConfigDBMaxConns))
+	db.SetMaxIdleConns(config.GetInt(api.ConfigDBIdleConns))
+	db.SetConnMaxLifetime(time.Duration(config.GetInt(api.ConfigDBConnsTimeout)) * time.Second)
 	dbMap[versionedID] = db
 	return
 }
