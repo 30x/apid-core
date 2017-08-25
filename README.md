@@ -52,3 +52,8 @@ the Log service and some kind of driver (via API or Events), so it's common prac
 ## Running Tests
 
     go test $(glide novendor)
+
+## apid.Data() service
+This service provides the primitives to perform SQL operations on the database. It also provides the
+provision to alter DB connection pool settings via ConfigDBMaxConns, ConfigDBIdleConns andonfigDBConnsTimeout configuration parameters. They currently are defaulted to 1000, 1000 and 120 seconds respectively.
+More details on this can be found at https://golang.org/pkg/database/sql
