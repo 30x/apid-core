@@ -27,10 +27,16 @@ import (
 )
 
 const (
-	configAPIListen   = "api_listen"
-	configExpVarPath  = "api_expvar_path"
-	configReadyPath   = "api_ready"
-	configHealthyPath = "api_healthy"
+	configAPIListen         = "api_listen"
+	configExpVarPath        = "api_expvar_path"
+	configReadyPath         = "api_ready"
+	configHealthyPath       = "api_healthy"
+	ConfigDBMaxConns        = "db_config_max_conns"
+	ConfigDBIdleConns       = "db_config_idle_conns"
+	ConfigDBConnsTimeout    = "db_config_conns_timeout_seconds"
+	dbDefaultMaxConnsLimit  = 1000
+	dbDefaultIdleConnsLimit = 1000
+	dbMaxConnTimeoutLimit   = 120
 )
 
 var log apid.LogService
@@ -44,6 +50,10 @@ func CreateService() apid.APIService {
 	config.SetDefault(configAPIListen, "127.0.0.1:9000")
 	config.SetDefault(configReadyPath, "/ready")
 	config.SetDefault(configHealthyPath, "/healthy")
+
+	config.SetDefault(ConfigDBMaxConns, dbDefaultMaxConnsLimit)
+	config.SetDefault(ConfigDBIdleConns, dbDefaultIdleConnsLimit)
+	config.SetDefault(ConfigDBConnsTimeout, dbMaxConnTimeoutLimit)
 
 	listen := config.GetString(configAPIListen)
 	h, p, err := net.SplitHostPort(listen)

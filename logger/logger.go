@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	configLevel = "log_level"
+	ConfigLevel = "log_level"
 
 	defaultLevel = logrus.ErrorLevel
 
@@ -42,10 +42,10 @@ var textFormatter = &logrus.TextFormatter{
 func Base() apid.LogService {
 	if std == nil {
 		config = apid.Config()
-		config.SetDefault(configLevel, defaultLevel.String())
-		logLevel := config.GetString(configLevel)
+		config.SetDefault(ConfigLevel, defaultLevel.String())
+		logLevel := config.GetString(ConfigLevel)
 		fmt.Printf("Base log level: %s\n", logLevel)
-		std = NewLogger(configLevel, logLevel)
+		std = NewLogger(ConfigLevel, logLevel)
 	}
 	return std
 }
@@ -62,7 +62,7 @@ type logger struct {
 // note: config module xx log level using config var: xx_log_level = "debug"
 func (l *logger) ForModule(name string) apid.LogService {
 
-	configKey := fmt.Sprintf("%s_%s", name, configLevel)
+	configKey := fmt.Sprintf("%s_%s", name, ConfigLevel)
 	log := NewLogger(configKey, config.GetString(configKey)).WithField(moduleField, name)
 	std.Debugf("created logger '%s' at level %s", name, log.(loggerPlus).Level())
 	return log

@@ -18,11 +18,15 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/api"
 	"github.com/30x/apid-core/data/wrap"
+	"github.com/30x/apid-core/logger"
+	"github.com/Sirupsen/logrus"
 	"github.com/mattn/go-sqlite3"
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -41,7 +45,12 @@ const (
 var log, dbTraceLog apid.LogService
 var config apid.ConfigService
 
-var dbMap = make(map[string]*sql.DB)
+type dbMapInfo struct {
+	db     *sql.DB
+	closed chan bool
+}
+
+var dbMap = make(map[string]*dbMapInfo)
 var dbMapSync sync.RWMutex
 
 func CreateDataService() apid.DataService {
@@ -97,12 +106,17 @@ func (d *dataService) ReleaseDB(id, version string) {
 	dbMapSync.Lock()
 	defer dbMapSync.Unlock()
 
-	db := dbMap[versionedID]
-	if db != nil {
-		dbMap[versionedID] = nil
+	dbm := dbMap[versionedID]
+	if dbm != nil && dbm.db != nil {
+		if strings.EqualFold(config.GetString(logger.ConfigLevel), logrus.DebugLevel.String()) {
+			dbm.closed <- true
+		}
 		log.Warn("SETTING FINALIZER")
 		finalizer := Delete(versionedID)
-		runtime.SetFinalizer(db, finalizer)
+		runtime.SetFinalizer(dbm.db, finalizer)
+		dbMap[versionedID] = nil
+	} else {
+		log.Error("Cannot find DB handle for ver {%s} to release", version)
 	}
 
 	return
@@ -110,22 +124,18 @@ func (d *dataService) ReleaseDB(id, version string) {
 
 func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error) {
 
+	var stoplogchan chan bool
 	versionedID := VersionedDBID(id, version)
 
 	dbMapSync.RLock()
-	db = dbMap[versionedID]
+	dbm := dbMap[versionedID]
 	dbMapSync.RUnlock()
-	if db != nil {
-		return
+	if dbm != nil && dbm.db != nil {
+		return dbm.db, nil
 	}
 
 	dbMapSync.Lock()
 	defer dbMapSync.Unlock()
-
-	db = dbMap[versionedID]
-	if db != nil {
-		return
-	}
 
 	dataPath := DBPath(versionedID)
 
@@ -171,11 +181,16 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 		log.Errorf("error enabling foreign_keys: %s", err)
 		return
 	}
-	dbLvl := config.GetString("log_level")
-	if dbLvl == "Debug" {
-		go printDBStatsInfo(db, versionedID)
+	if strings.EqualFold(config.GetString(logger.ConfigLevel),
+		logrus.DebugLevel.String()) {
+		stoplogchan = logDBInfo(versionedID, db)
 	}
-	dbMap[versionedID] = db
+
+	db.SetMaxOpenConns(config.GetInt(api.ConfigDBMaxConns))
+	db.SetMaxIdleConns(config.GetInt(api.ConfigDBIdleConns))
+	db.SetConnMaxLifetime(time.Duration(config.GetInt(api.ConfigDBConnsTimeout)) * time.Second)
+	dbInfo := dbMapInfo{db: db, closed: stoplogchan}
+	dbMap[versionedID] = &dbInfo
 	return
 }
 
@@ -204,9 +219,19 @@ func DBPath(id string) string {
 	return path.Join(storagePath, relativeDataPath, id, "sqlite3")
 }
 
-func printDBStatsInfo(db *sql.DB, versionedId string) {
-	tick := time.Duration(statCollectionInterval * time.Second)
-	for _ = range time.Tick(tick) {
-		log.Debugf("Current number of open DB connections for ver {%s} is {%d}", versionedId, db.Stats().OpenConnections)
-	}
+func logDBInfo(versionedId string, db *sql.DB) chan bool {
+	stop := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Duration(statCollectionInterval * time.Second)):
+				log.Debugf("Current number of open DB connections for ver {%s} is {%d}",
+					versionedId, db.Stats().OpenConnections)
+			case <-stop:
+				log.Debugf("Stop DB conn. logging for ver {%s}", versionedId)
+				return
+			}
+		}
+	}()
+	return stop
 }
