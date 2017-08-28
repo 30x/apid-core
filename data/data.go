@@ -38,7 +38,7 @@ const (
 	statCollectionInterval = 10
 	commonDBID             = "common"
 	commonDBVersion        = "base"
-
+	dbOpenMode             = "?cache=shared&mode=rwc"
 	defaultTraceLevel = "warn"
 )
 
@@ -62,7 +62,7 @@ func CreateDataService() apid.DataService {
 	dbTraceLog = apid.Log().ForModule("data_trace")
 
 	config.SetDefault(configDataDriverKey, "sqlite3")
-	config.SetDefault(configDataSourceKey, "file:%s")
+	config.SetDefault(configDataSourceKey, "%s")
 	config.SetDefault(configDataPathKey, "sqlite")
 
 	return &dataService{}
