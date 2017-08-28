@@ -26,7 +26,9 @@ type DataService interface {
 	DBVersionForID(id, version string) (db DB, err error)
 
 	// will set DB to close and delete when no more references
-	ReleaseDB(id, version string)
+	ReleaseDB(version string)
+	ReleaseCommonDB()
+	ReleaseDBForID(id, version string)
 }
 
 type DB interface {
