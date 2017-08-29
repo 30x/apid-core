@@ -145,7 +145,7 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 
 	log.Infof("LoadDB: %s", dataPath)
 	source := fmt.Sprintf(config.GetString(configDataSourceKey), dataPath)
-
+	source += dbOpenMode
 	wrappedDriverName := "dd:" + config.GetString(configDataDriverKey)
 	driver := wrap.NewDriver(&sqlite3.SQLiteDriver{}, dbTraceLog)
 	func() {
