@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	count    = 2000
+	count    = 5000
 	setupSql = `
 		CREATE TABLE test_1 (id INTEGER PRIMARY KEY, counter TEXT);
 		CREATE TABLE test_2 (id INTEGER PRIMARY KEY, counter TEXT);`
@@ -150,6 +150,8 @@ func read(db apid.DB) {
 }
 
 func write(db apid.DB, i int) {
+
+	// DB INSERT as a txn
 	tx, err := db.Begin()
 	defer tx.Rollback()
 	if err != nil {
@@ -162,5 +164,7 @@ func write(db apid.DB, i int) {
 	}
 	prep.Close()
 	tx.Commit()
+	// DB INSERT directly, not via a txn
+	db.Exec("INSERT INTO test_1 (counter) VALUES ($?)", i + 10000)
 	fmt.Print("+")
 }

@@ -62,7 +62,7 @@ func CreateDataService() apid.DataService {
 	dbTraceLog = apid.Log().ForModule("data_trace")
 
 	config.SetDefault(configDataDriverKey, "sqlite3")
-	config.SetDefault(configDataSourceKey, "%s")
+	config.SetDefault(configDataSourceKey, "file:%s")
 	config.SetDefault(configDataPathKey, "sqlite")
 
 	return &dataService{}
