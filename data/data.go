@@ -99,8 +99,18 @@ func (d *dataService) DBVersionForID(id, version string) (apid.DB, error) {
 	return d.dbVersionForID(id, version)
 }
 
-// will set DB to close and delete when no more references
-func (d *dataService) ReleaseDB(id, version string) {
+// will set DB to close and delete when no more references for commonDBID, provided version
+func (d *dataService) ReleaseDB(version string) {
+	d.ReleaseDBForID(commonDBID, version)
+}
+
+// will set DB to close and delete when no more references for commonDBID, commonDBVersion
+func (d *dataService) ReleaseCommonDB() {
+	d.ReleaseDBForID(commonDBID, commonDBVersion)
+}
+
+// will set DB to close and delete when no more references for any ID
+func (d *dataService) ReleaseDBForID(id, version string) {
 	versionedID := VersionedDBID(id, version)
 
 	dbMapSync.Lock()
@@ -116,7 +126,7 @@ func (d *dataService) ReleaseDB(id, version string) {
 		runtime.SetFinalizer(dbm.db, finalizer)
 		dbMap[versionedID] = nil
 	} else {
-		log.Error("Cannot find DB handle for ver {%s} to release", version)
+		log.Errorf("Cannot find DB handle for ver {%s} to release", version)
 	}
 
 	return
