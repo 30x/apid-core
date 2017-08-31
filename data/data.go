@@ -15,6 +15,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/30x/apid-core"
@@ -39,19 +40,111 @@ const (
 	commonDBID             = "common"
 	commonDBVersion        = "base"
 	dbOpenMode             = "?cache=shared&mode=rwc"
-	defaultTraceLevel = "warn"
+	defaultTraceLevel      = "warn"
 )
 
 var log, dbTraceLog apid.LogService
 var config apid.ConfigService
 
 type dbMapInfo struct {
-	db     *sql.DB
+	db     *ApidDb
 	closed chan bool
 }
 
 var dbMap = make(map[string]*dbMapInfo)
 var dbMapSync sync.RWMutex
+
+type ApidDb struct {
+	db    *sql.DB
+	mutex *sync.Mutex
+}
+
+func (d *ApidDb) Ping() error {
+	return d.db.Ping()
+}
+
+func (d *ApidDb) Prepare(query string) (*sql.Stmt, error) {
+	return d.db.Prepare(query)
+}
+
+func (d *ApidDb) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return d.db.Exec(query, args...)
+}
+
+func (d *ApidDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return d.db.Query(query, args...)
+}
+
+func (d *ApidDb) QueryRow(query string, args ...interface{}) *sql.Row {
+	return d.db.QueryRow(query, args...)
+}
+
+func (d *ApidDb) Begin() (apid.Tx, error) {
+	d.mutex.Lock()
+	tx, err := d.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{
+		tx:    tx,
+		mutex: d.mutex,
+	}, nil
+}
+
+func (d *ApidDb) Stats() sql.DBStats {
+	return d.db.Stats()
+}
+
+type Tx struct {
+	tx     *sql.Tx
+	mutex  *sync.Mutex
+	closed bool
+}
+
+func (tx *Tx) Commit() error {
+	if !tx.closed {
+		defer tx.mutex.Unlock()
+		tx.closed = true
+	}
+	return tx.tx.Commit()
+}
+func (tx *Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return tx.tx.Exec(query, args...)
+}
+func (tx *Tx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return tx.tx.ExecContext(ctx, query, args...)
+}
+func (tx *Tx) Prepare(query string) (*sql.Stmt, error) {
+	return tx.tx.Prepare(query)
+}
+func (tx *Tx) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	return tx.tx.PrepareContext(ctx, query)
+}
+func (tx *Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return tx.tx.Query(query, args...)
+}
+func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return tx.tx.QueryContext(ctx, query, args...)
+}
+func (tx *Tx) QueryRow(query string, args ...interface{}) *sql.Row {
+	return tx.tx.QueryRow(query, args...)
+}
+func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return tx.tx.QueryRowContext(ctx, query, args...)
+}
+func (tx *Tx) Rollback() error {
+	if !tx.closed {
+		defer tx.mutex.Unlock()
+		tx.closed = true
+	}
+	return tx.tx.Rollback()
+}
+func (tx *Tx) Stmt(stmt *sql.Stmt) *sql.Stmt {
+	return tx.tx.Stmt(stmt)
+}
+func (tx *Tx) StmtContext(ctx context.Context, stmt *sql.Stmt) *sql.Stmt {
+	return tx.tx.StmtContext(ctx, stmt)
+}
 
 func CreateDataService() apid.DataService {
 	config = apid.Config()
@@ -132,7 +225,7 @@ func (d *dataService) ReleaseDBForID(id, version string) {
 	return
 }
 
-func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error) {
+func (d *dataService) dbVersionForID(id, version string) (retDb *ApidDb, err error) {
 
 	var stoplogchan chan bool
 	versionedID := VersionedDBID(id, version)
@@ -166,10 +259,16 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 		sql.Register(wrappedDriverName, driver)
 	}()
 
-	db, err = sql.Open(wrappedDriverName, source)
+	db, err := sql.Open(wrappedDriverName, source)
+
 	if err != nil {
 		log.Errorf("error loading db: %s", err)
 		return
+	}
+
+	retDb = &ApidDb{
+		db:    db,
+		mutex: &sync.Mutex{},
 	}
 
 	err = db.Ping()
@@ -199,14 +298,17 @@ func (d *dataService) dbVersionForID(id, version string) (db *sql.DB, err error)
 	db.SetMaxOpenConns(config.GetInt(api.ConfigDBMaxConns))
 	db.SetMaxIdleConns(config.GetInt(api.ConfigDBIdleConns))
 	db.SetConnMaxLifetime(time.Duration(config.GetInt(api.ConfigDBConnsTimeout)) * time.Second)
-	dbInfo := dbMapInfo{db: db, closed: stoplogchan}
+	dbInfo := dbMapInfo{
+		db:     retDb,
+		closed: stoplogchan,
+	}
 	dbMap[versionedID] = &dbInfo
 	return
 }
 
 func Delete(versionedID string) interface{} {
-	return func(db *sql.DB) {
-		err := db.Close()
+	return func(db *ApidDb) {
+		err := db.db.Close()
 		if err != nil {
 			log.Errorf("error closing DB: %v", err)
 		}
