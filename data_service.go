@@ -15,6 +15,7 @@
 package apid
 
 import (
+	"context"
 	"database/sql"
 )
 
@@ -37,9 +38,24 @@ type DB interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-	Begin() (*sql.Tx, error)
-
+	Begin() (Tx, error)
+	Stats() sql.DBStats
 	//Close() error
 	//Stats() sql.DBStats
 	//Driver() driver.Driver
+}
+
+type Tx interface {
+	Commit() error
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Prepare(query string) (*sql.Stmt, error)
+	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	Rollback() error
+	Stmt(stmt *sql.Stmt) *sql.Stmt
+	StmtContext(ctx context.Context, stmt *sql.Stmt) *sql.Stmt
 }
