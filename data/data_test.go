@@ -17,25 +17,23 @@ package data_test
 import (
 	"fmt"
 	"github.com/30x/apid-core"
+	"github.com/30x/apid-core/data"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"log"
 	"math/rand"
 	"strconv"
 	"time"
-	"github.com/30x/apid-core/data"
-	"database/sql"
 )
 
 const (
-	count    = 2000
+	count    = 5000
 	setupSql = `
 		CREATE TABLE test_1 (id INTEGER PRIMARY KEY, counter TEXT);
 		CREATE TABLE test_2 (id INTEGER PRIMARY KEY, counter TEXT);`
 )
 
 var (
-	r      *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	r *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 var _ = Describe("Data Service", func() {
@@ -77,90 +75,95 @@ var _ = Describe("Data Service", func() {
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		id := data.VersionedDBID("release", "version")
-		sqlDB := db.(*sql.DB)
-		Expect(sqlDB.Stats().OpenConnections).To(Equal(1))
+		Expect(db.Stats().OpenConnections).To(Equal(1))
 		// run finalizer
-		data.Delete(id).(func(db *sql.DB))(sqlDB)
-		Expect(sqlDB.Stats().OpenConnections).To(Equal(0))
+		data.Delete(id).(func(db *data.ApidDb))(db.(*data.ApidDb))
+		Expect(db.Stats().OpenConnections).To(Equal(0))
 		Expect(data.DBPath(id)).ShouldNot(BeAnExistingFile())
 	})
 
-	It("should handle multi-threaded access", func(done Done) {
+	It("should handle concurrent read & serialized write", func() {
 		db, err := apid.Data().DBForID("test")
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
-		finished := make(chan struct{})
+		finished := make(chan bool, count+1)
 
 		go func() {
 			for i := 0; i < count; i++ {
 				write(db, i)
 			}
-			finished <- struct{}{}
+			finished <- true
 		}()
 
-		go func() {
-			for i := 0; i < count; i++ {
-				go func() {
-					read(db)
-					finished <- struct{}{}
-				}()
-				time.Sleep(time.Duration(r.Intn(2)) * time.Millisecond)
-			}
-		}()
+		for i := 0; i < count; i++ {
+			go func() {
+				read(db)
+				finished <- true
+			}()
+		}
 
 		for i := 0; i < count+1; i++ {
 			<-finished
 		}
+	}, 10)
 
-		close(done)
+	It("should handle concurrent write", func() {
+		db, err := apid.Data().DBForID("test_write")
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		finished := make(chan bool, count)
+
+		for i := 0; i < count; i++ {
+			go func() {
+				write(db, i)
+				finished <- true
+			}()
+		}
+
+		for i := 0; i < count; i++ {
+			<-finished
+		}
 	}, 10)
 })
 
 func setup(db apid.DB) {
 	_, err := db.Exec(setupSql)
-	if err != nil {
-		log.Fatal(err)
-	}
+	Expect(err).Should(Succeed())
 	tx, err := db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
+	Expect(err).Should(Succeed())
 	for i := 0; i < count; i++ {
 		_, err := tx.Exec("INSERT INTO test_2 (counter) VALUES (?);", strconv.Itoa(i))
-		if err != nil {
-			log.Fatalf("filling up test_2 table failed. Exec error=%s", err)
-		}
+		Expect(err).Should(Succeed())
 	}
-	tx.Commit()
+	Expect(tx.Commit()).Should(Succeed())
 }
 
 func read(db apid.DB) {
+	defer GinkgoRecover()
 	var counter string
 	rows, err := db.Query(`SELECT counter FROM test_2 LIMIT 5`)
-	if err != nil {
-		log.Fatalf("test_2 select failed. Exec error=%s", err)
-	} else {
-		defer rows.Close()
-		for rows.Next() {
-			rows.Scan(&counter)
-			//fmt.Print("*")
-		}
+	Expect(err).Should(Succeed())
+	defer rows.Close()
+	for rows.Next() {
+		rows.Scan(&counter)
 	}
 	fmt.Print(".")
 }
 
 func write(db apid.DB, i int) {
+	defer GinkgoRecover()
+	// DB INSERT as a txn
 	tx, err := db.Begin()
+	Expect(err).Should(Succeed())
 	defer tx.Rollback()
-	if err != nil {
-		log.Fatalf("Write failed. Exec error=%s", err)
-	}
 	prep, err := tx.Prepare("INSERT INTO test_1 (counter) VALUES ($1);")
-	_, err = tx.Stmt(prep).Exec(strconv.Itoa(i))
-	if err != nil {
-		log.Fatalf("Write failed. Exec error=%s", err)
-	}
-	prep.Close()
-	tx.Commit()
+	Expect(err).Should(Succeed())
+	_, err = prep.Exec(strconv.Itoa(i))
+	Expect(err).Should(Succeed())
+	Expect(prep.Close()).Should(Succeed())
+	Expect(tx.Commit()).Should(Succeed())
+	// DB INSERT directly, not via a txn
+	//_, err = db.Exec("INSERT INTO test_1 (counter) VALUES ($?)", i+10000)
+	//Expect(err).Should(Succeed())
 	fmt.Print("+")
 }
