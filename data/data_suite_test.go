@@ -18,11 +18,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/factory"
 	"io/ioutil"
 	"os"
+	"testing"
 )
 
 var tmpDir string
