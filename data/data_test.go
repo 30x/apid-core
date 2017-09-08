@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	count    = 5000
+	count    = 500
 	setupSql = `
 		CREATE TABLE test_1 (id INTEGER PRIMARY KEY, counter TEXT);
 		CREATE TABLE test_2 (id INTEGER PRIMARY KEY, counter TEXT);`
@@ -47,19 +47,6 @@ var _ = Describe("Data Service", func() {
 
 		_, err = apid.Data().DBVersionForID("common", "base")
 		Expect(err).To(HaveOccurred())
-	})
-	It("DB Begin Txn failure handled", func() {
-		var numRows int
-		db, err := apid.Data().DBForID("test")
-		db.SetMaxOpenConns(1)
-		db.SetMaxIdleConns(1)
-		err = db.QueryRow(`SELECT count(*) FROM test_2`).Scan(&numRows)
-		Expect(err).To(HaveOccurred())
-
-		tx, err := db.Begin()
-		Expect(err).NotTo(HaveOccurred())
-		tx.Commit()
-
 	})
 	It("should be able to change versions of a datbase", func() {
 		var versions []string
@@ -94,10 +81,10 @@ var _ = Describe("Data Service", func() {
 		Expect(data.DBPath(id)).ShouldNot(BeAnExistingFile())
 	})
 
-	It("should handle concurrent read & serialized write", func() {
+	It("should handle concurrent read & serialized write, and throttle", func() {
 		db, err := apid.Data().DBForID("test")
-		db.SetMaxOpenConns(1)
-		db.SetMaxIdleConns(1)
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count+1)
@@ -118,14 +105,14 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count+1; i++ {
 			<-finished
-			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
+		Expect(db.Stats().OpenConnections).To(Equal(10))
 	}, 10)
 
 	It("should handle concurrent write", func() {
 		db, err := apid.Data().DBForID("test_write")
-		db.SetMaxOpenConns(1)
-		db.SetMaxIdleConns(1)
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count)
@@ -139,8 +126,9 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count; i++ {
 			<-finished
-			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
+		// Only one connection should get opened, as connections are serialized.
+		Expect(db.Stats().OpenConnections).To(Equal(1))
 	}, 10)
 })
 
