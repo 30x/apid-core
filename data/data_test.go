@@ -48,7 +48,19 @@ var _ = Describe("Data Service", func() {
 		_, err = apid.Data().DBVersionForID("common", "base")
 		Expect(err).To(HaveOccurred())
 	})
+	It("DB Begin Txn failure handled", func() {
+		var numRows int
+		db, err := apid.Data().DBForID("test")
+		db.SetMaxOpenConns(1)
+		db.SetMaxIdleConns(1)
+		err = db.QueryRow(`SELECT count(*) FROM test_2`).Scan(&numRows)
+		Expect(err).To(HaveOccurred())
 
+		tx, err := db.Begin()
+		Expect(err).NotTo(HaveOccurred())
+		tx.Commit()
+
+	})
 	It("should be able to change versions of a datbase", func() {
 		var versions []string
 		var dbs []apid.DB
@@ -84,6 +96,8 @@ var _ = Describe("Data Service", func() {
 
 	It("should handle concurrent read & serialized write", func() {
 		db, err := apid.Data().DBForID("test")
+		db.SetMaxOpenConns(1)
+		db.SetMaxIdleConns(1)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count+1)
@@ -104,11 +118,14 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count+1; i++ {
 			<-finished
+			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
 	}, 10)
 
 	It("should handle concurrent write", func() {
 		db, err := apid.Data().DBForID("test_write")
+		db.SetMaxOpenConns(1)
+		db.SetMaxIdleConns(1)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count)
@@ -122,6 +139,7 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count; i++ {
 			<-finished
+			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
 	}, 10)
 })
