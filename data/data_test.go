@@ -105,9 +105,9 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count+1; i++ {
 			<-finished
+			// Since conns are shared, will always be <= 10
 			Expect(db.Stats().OpenConnections).Should(BeNumerically("<=", 10))
 		}
-		Expect(db.Stats().OpenConnections).To(Equal(10))
 	}, 10)
 
 	It("should handle concurrent write", func() {
@@ -127,10 +127,9 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count; i++ {
 			<-finished
+			// Only one connection should get opened, as connections are serialized.
 			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
-		// Only one connection should get opened, as connections are serialized.
-		Expect(db.Stats().OpenConnections).To(Equal(1))
 	}, 10)
 })
 
