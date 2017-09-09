@@ -63,6 +63,18 @@ func (d *ApidDb) Ping() error {
 	return d.db.Ping()
 }
 
+func (d *ApidDb) SetMaxIdleConns(n int) {
+	 d.db.SetMaxIdleConns(n)
+}
+
+func (d *ApidDb) SetMaxOpenConns(n int) {
+	d.db.SetMaxOpenConns(n)
+}
+
+func (d *ApidDb) SetConnMaxLifetime(du time.Duration) {
+	d.db.SetConnMaxLifetime(du)
+}
+
 func (d *ApidDb) Prepare(query string) (*sql.Stmt, error) {
 	return d.db.Prepare(query)
 }
@@ -83,6 +95,7 @@ func (d *ApidDb) Begin() (apid.Tx, error) {
 	d.mutex.Lock()
 	tx, err := d.db.Begin()
 	if err != nil {
+		d.mutex.Unlock()
 		return nil, err
 	}
 	return &Tx{

@@ -17,6 +17,7 @@ package apid
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 type DataService interface {
@@ -40,6 +41,9 @@ type DB interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 	Begin() (Tx, error)
 	Stats() sql.DBStats
+	SetConnMaxLifetime(d time.Duration)
+	SetMaxIdleConns(n int)
+	SetMaxOpenConns(n int)
 	//Close() error
 	//Stats() sql.DBStats
 	//Driver() driver.Driver
