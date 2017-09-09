@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	count    = 5000
+	count    = 500
 	setupSql = `
 		CREATE TABLE test_1 (id INTEGER PRIMARY KEY, counter TEXT);
 		CREATE TABLE test_2 (id INTEGER PRIMARY KEY, counter TEXT);`
@@ -48,7 +48,6 @@ var _ = Describe("Data Service", func() {
 		_, err = apid.Data().DBVersionForID("common", "base")
 		Expect(err).To(HaveOccurred())
 	})
-
 	It("should be able to change versions of a datbase", func() {
 		var versions []string
 		var dbs []apid.DB
@@ -82,8 +81,10 @@ var _ = Describe("Data Service", func() {
 		Expect(data.DBPath(id)).ShouldNot(BeAnExistingFile())
 	})
 
-	It("should handle concurrent read & serialized write", func() {
+	It("should handle concurrent read & serialized write, and throttle", func() {
 		db, err := apid.Data().DBForID("test")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count+1)
@@ -104,11 +105,15 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count+1; i++ {
 			<-finished
+			// Since conns are shared, will always be <= 10
+			Expect(db.Stats().OpenConnections).Should(BeNumerically("<=", 10))
 		}
 	}, 10)
 
 	It("should handle concurrent write", func() {
 		db, err := apid.Data().DBForID("test_write")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
 		Expect(err).NotTo(HaveOccurred())
 		setup(db)
 		finished := make(chan bool, count)
@@ -122,6 +127,8 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < count; i++ {
 			<-finished
+			// Only one connection should get opened, as connections are serialized.
+			Expect(db.Stats().OpenConnections).To(Equal(1))
 		}
 	}, 10)
 })
