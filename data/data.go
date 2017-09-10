@@ -104,6 +104,10 @@ func (d *ApidDb) Begin() (apid.Tx, error) {
 	}, nil
 }
 
+func (d *ApidDb) BeginReadOnly() (*sql.Tx, error) {
+	return d.db.Begin()
+}
+
 func (d *ApidDb) Stats() sql.DBStats {
 	return d.db.Stats()
 }

@@ -44,6 +44,7 @@ type DB interface {
 	SetConnMaxLifetime(d time.Duration)
 	SetMaxIdleConns(n int)
 	SetMaxOpenConns(n int)
+	BeginReadOnly() (*sql.Tx, error)
 	//Close() error
 	//Stats() sql.DBStats
 	//Driver() driver.Driver
