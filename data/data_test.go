@@ -119,16 +119,102 @@ var _ = Describe("Data Service", func() {
 		finished := make(chan bool, count)
 
 		for i := 0; i < count; i++ {
-			go func() {
-				write(db, i)
+			go func(j int) {
+				write(db, j)
 				finished <- true
-			}()
+			}(i)
 		}
 
 		for i := 0; i < count; i++ {
 			<-finished
 			// Only one connection should get opened, as connections are serialized.
 			Expect(db.Stats().OpenConnections).To(Equal(1))
+		}
+	}, 10)
+
+	It("should handle concurrent read & write", func() {
+		db, err := apid.Data().DBForID("test_read_write")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		finished := make(chan bool, 2*count)
+
+		for i := 0; i < count; i++ {
+			go func(j int) {
+				write(db, j)
+				finished <- true
+			}(i)
+			go func() {
+				read(db)
+				finished <- true
+			}()
+		}
+
+		for i := 0; i < 2*count; i++ {
+			<-finished
+		}
+	}, 10)
+
+	It("should handle concurrent alter table by seralizing them", func() {
+		db, err := apid.Data().DBForID("test_alter")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		alterCount := 50
+		finished := make(chan bool, alterCount)
+
+		for i := 0; i < alterCount; i++ {
+			go func(j int) {
+				alter(db, j)
+				finished <- true
+			}(i)
+		}
+
+		for i := 0; i < alterCount; i++ {
+			<-finished
+			Expect(db.Stats().OpenConnections).To(Equal(1))
+		}
+	}, 10)
+
+	It("should handle seralized read & alter table", func() {
+		db, err := apid.Data().DBForID("test_read_alter")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		alterCount := 50
+		for i := 0; i < alterCount; i++ {
+			alter(db, i)
+			read(db)
+		}
+	}, 10)
+
+	It("should handle concurrent read & alter table", func() {
+		db, err := apid.Data().DBForID("test_conn_read_alter")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		alterCount := 50
+		finished := make(chan bool, count+alterCount)
+		for i := 0; i < alterCount; i++ {
+			go func(j int) {
+				alter(db, j)
+				finished <- true
+			}(i)
+		}
+
+		for i := 0; i < count; i++ {
+			go func() {
+				read(db)
+				finished <- true
+			}()
+		}
+
+		for i := 0; i < count+alterCount; i++ {
+			<-finished
 		}
 	}, 10)
 })
@@ -172,5 +258,20 @@ func write(db apid.DB, i int) {
 	// DB INSERT directly, not via a txn
 	//_, err = db.Exec("INSERT INTO test_1 (counter) VALUES ($?)", i+10000)
 	//Expect(err).Should(Succeed())
+	fmt.Print("+")
+}
+
+func alter(db apid.DB, i int) {
+	defer GinkgoRecover()
+	// DB INSERT as a txn
+	tx, err := db.Begin()
+	Expect(err).Should(Succeed())
+	defer tx.Rollback()
+	prep, err := tx.Prepare("ALTER TABLE test_1 ADD COLUMN colname_" + strconv.Itoa(i) + " text DEFAULT ''")
+	Expect(err).Should(Succeed())
+	_, err = prep.Exec()
+	Expect(err).Should(Succeed())
+	Expect(prep.Close()).Should(Succeed())
+	Expect(tx.Commit()).Should(Succeed())
 	fmt.Print("+")
 }

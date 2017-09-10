@@ -64,7 +64,7 @@ func (d *ApidDb) Ping() error {
 }
 
 func (d *ApidDb) SetMaxIdleConns(n int) {
-	 d.db.SetMaxIdleConns(n)
+	d.db.SetMaxIdleConns(n)
 }
 
 func (d *ApidDb) SetMaxOpenConns(n int) {
