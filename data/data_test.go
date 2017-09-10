@@ -261,9 +261,13 @@ func setup(db apid.DB) {
 func read(db apid.DB) {
 	defer GinkgoRecover()
 	var counter string
-	rows, err := db.Query(`SELECT counter FROM test_1 LIMIT 5`)
+	tx, err := db.BeginReadOnly()
 	Expect(err).Should(Succeed())
-	defer rows.Close()
+	defer tx.Rollback()
+	rows, err := tx.Query(`SELECT counter FROM test_1 LIMIT 5`)
+	Expect(err).Should(Succeed())
+	Expect(rows.Close()).Should(Succeed())
+	Expect(tx.Commit()).Should(Succeed())
 	for rows.Next() {
 		rows.Scan(&counter)
 	}
