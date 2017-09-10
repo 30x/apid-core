@@ -167,7 +167,7 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < alterCount; i++ {
 			go func(j int) {
-				alter(db, j)
+				alter(db, j, "test_1")
 				finished <- true
 			}(i)
 		}
@@ -186,12 +186,12 @@ var _ = Describe("Data Service", func() {
 		setup(db)
 		alterCount := 50
 		for i := 0; i < alterCount; i++ {
-			alter(db, i)
+			alter(db, i, "test_1")
 			read(db)
 		}
 	}, 10)
 
-	It("should handle concurrent read & alter table", func() {
+	It("concurrent read & alter the same table ", func() {
 		db, err := apid.Data().DBForID("test_conn_read_alter")
 		db.SetMaxOpenConns(10)
 		db.SetMaxIdleConns(10)
@@ -201,7 +201,34 @@ var _ = Describe("Data Service", func() {
 		finished := make(chan bool, count+alterCount)
 		for i := 0; i < alterCount; i++ {
 			go func(j int) {
-				alter(db, j)
+				alter(db, j, "test_1")
+				finished <- true
+			}(i)
+		}
+
+		for i := 0; i < count; i++ {
+			go func() {
+				read(db)
+				finished <- true
+			}()
+		}
+
+		for i := 0; i < count+alterCount; i++ {
+			<-finished
+		}
+	}, 10)
+
+	It("concurrent read & alter different tables", func() {
+		db, err := apid.Data().DBForID("test_conn_read_alter_diff_table")
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(10)
+		Expect(err).NotTo(HaveOccurred())
+		setup(db)
+		alterCount := 50
+		finished := make(chan bool, count+alterCount)
+		for i := 0; i < alterCount; i++ {
+			go func(j int) {
+				alter(db, j, "test_2")
 				finished <- true
 			}(i)
 		}
@@ -234,7 +261,7 @@ func setup(db apid.DB) {
 func read(db apid.DB) {
 	defer GinkgoRecover()
 	var counter string
-	rows, err := db.Query(`SELECT counter FROM test_2 LIMIT 5`)
+	rows, err := db.Query(`SELECT counter FROM test_1 LIMIT 5`)
 	Expect(err).Should(Succeed())
 	defer rows.Close()
 	for rows.Next() {
@@ -261,17 +288,17 @@ func write(db apid.DB, i int) {
 	fmt.Print("+")
 }
 
-func alter(db apid.DB, i int) {
+func alter(db apid.DB, i int, tableName string) {
 	defer GinkgoRecover()
 	// DB INSERT as a txn
 	tx, err := db.Begin()
 	Expect(err).Should(Succeed())
 	defer tx.Rollback()
-	prep, err := tx.Prepare("ALTER TABLE test_1 ADD COLUMN colname_" + strconv.Itoa(i) + " text DEFAULT ''")
+	prep, err := tx.Prepare("ALTER TABLE " + tableName + " ADD COLUMN colname_" + strconv.Itoa(i) + " text DEFAULT ''")
 	Expect(err).Should(Succeed())
 	_, err = prep.Exec()
 	Expect(err).Should(Succeed())
 	Expect(prep.Close()).Should(Succeed())
 	Expect(tx.Commit()).Should(Succeed())
-	fmt.Print("+")
+	fmt.Print("-")
 }
