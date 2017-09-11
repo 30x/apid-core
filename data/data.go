@@ -39,7 +39,6 @@ const (
 	statCollectionInterval = 10
 	commonDBID             = "common"
 	commonDBVersion        = "base"
-	dbOpenMode             = "?cache=shared&mode=rwc"
 	defaultTraceLevel      = "warn"
 )
 
@@ -261,7 +260,6 @@ func (d *dataService) dbVersionForID(id, version string) (retDb *ApidDb, err err
 
 	log.Infof("LoadDB: %s", dataPath)
 	source := fmt.Sprintf(config.GetString(configDataSourceKey), dataPath)
-	source += dbOpenMode
 	wrappedDriverName := "dd:" + config.GetString(configDataDriverKey)
 	driver := wrap.NewDriver(&sqlite3.SQLiteDriver{}, dbTraceLog)
 	func() {
