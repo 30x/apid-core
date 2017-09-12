@@ -20,16 +20,17 @@ import (
 	"fmt"
 	"github.com/30x/apid-core"
 	"github.com/30x/apid-core/api"
-	"github.com/30x/apid-core/data/wrap"
+	//"github.com/30x/apid-core/data/wrap"
 	"github.com/30x/apid-core/logger"
 	"github.com/Sirupsen/logrus"
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
 )
 
 const (
@@ -260,17 +261,13 @@ func (d *dataService) dbVersionForID(id, version string) (retDb *ApidDb, err err
 
 	log.Infof("LoadDB: %s", dataPath)
 	source := fmt.Sprintf(config.GetString(configDataSourceKey), dataPath)
-	wrappedDriverName := "dd:" + config.GetString(configDataDriverKey)
-	driver := wrap.NewDriver(&sqlite3.SQLiteDriver{}, dbTraceLog)
-	func() {
-		// just ignore the "registered twice" panic
-		defer func() {
-			recover()
-		}()
-		sql.Register(wrappedDriverName, driver)
-	}()
 
-	db, err := sql.Open(wrappedDriverName, source)
+
+	// set DB name
+	dbnameWithDSN := source + fmt.Sprintf("?_pragma_key=x'%s'",
+		"123456")
+
+	db, err := sql.Open("sqlite3", dbnameWithDSN)
 
 	if err != nil {
 		log.Errorf("error loading db: %s", err)
