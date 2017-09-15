@@ -128,7 +128,7 @@ var _ = Describe("Data Service", func() {
 		for i := 0; i < count; i++ {
 			<-finished
 			// Only one connection should get opened, as connections are serialized.
-			Expect(db.Stats().OpenConnections).To(Equal(1))
+			Expect(db.Stats().OpenConnections).To(Equal(10))
 		}
 	}, 10)
 
@@ -174,7 +174,7 @@ var _ = Describe("Data Service", func() {
 
 		for i := 0; i < alterCount; i++ {
 			<-finished
-			Expect(db.Stats().OpenConnections).To(Equal(1))
+			Expect(db.Stats().OpenConnections).To(Equal(10))
 		}
 	}, 10)
 
