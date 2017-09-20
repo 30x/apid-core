@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package: github.com/30x/apid-core
+package: github.com/apid/apid-core
 import:
 - package: github.com/Sirupsen/logrus
   version: v0.11.0
@@ -22,7 +22,7 @@ import:
   version: v1.2.0
 - package: github.com/gorilla/mux
   version: v1.3.0
-- package: github.com/30x/goscaffold
+- package: github.com/apid/goscaffold
   version: 68835e7a23284346c2a11ad43effe69197c71b26
 testImport:
 - package: github.com/onsi/ginkgo/ginkgo
