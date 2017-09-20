@@ -21,8 +21,8 @@ import (
 
 	"net"
 
-	"github.com/30x/apid-core"
-	"github.com/30x/goscaffold"
+	"github.com/apid/apid-core"
+	"github.com/apid/goscaffold"
 	"github.com/gorilla/mux"
 )
 

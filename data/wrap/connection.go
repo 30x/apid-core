@@ -19,7 +19,7 @@ import (
 
 	"sync/atomic"
 
-	"github.com/30x/apid-core"
+	"github.com/apid/apid-core"
 	"github.com/mattn/go-sqlite3"
 )
 
