@@ -18,7 +18,7 @@ import (
 	"sync"
 	"reflect"
 
-	"github.com/30x/apid-core"
+	"github.com/apid/apid-core"
 )
 
 // events published to a given channel are processed entirely in order, though delivery to listeners is async

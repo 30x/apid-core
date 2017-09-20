@@ -3,7 +3,7 @@
 apid-core is a library that provides a container for publishing APIs that provides core services to its plugins 
 including configuration, API publishing, data access, and a local pub/sub event system.
 
-Disambiguation: You might be looking for the executable builder, [apid](https://github.com/30x/apid).  
+Disambiguation: You might be looking for the executable builder, [apid](https://github.com/apid/apid).  
 
 ## Services
 

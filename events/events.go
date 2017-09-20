@@ -14,7 +14,7 @@
 
 package events
 
-import "github.com/30x/apid-core"
+import "github.com/apid/apid-core"
 
 // simple pub/sub to deliver events to listeners based on a selector string
 

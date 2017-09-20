@@ -18,8 +18,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/30x/apid-core"
-	"github.com/30x/apid-core/events"
+	"github.com/apid/apid-core"
+	"github.com/apid/apid-core/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
