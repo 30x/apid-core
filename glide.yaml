@@ -23,7 +23,7 @@ import:
 - package: github.com/gorilla/mux
   version: v1.3.0
 - package: github.com/apid/goscaffold
-  version: 68835e7a23284346c2a11ad43effe69197c71b26
+  version: master
 testImport:
 - package: github.com/onsi/ginkgo/ginkgo
 - package: github.com/onsi/gomega
