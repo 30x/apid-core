@@ -63,43 +63,59 @@ func (c *ConfigMgr) Set(key string, value interface{}) {
 func (c *ConfigMgr) Get(key string) interface{} {
 	c.Lock()
 	defer c.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.Get(key)
 }
 
 func (c *ConfigMgr) GetBool(key string) bool {
 	c.Lock()
 	defer c.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.GetBool(key)
 }
 
 func (c *ConfigMgr) GetFloat64(key string) float64 {
 	c.Lock()
 	defer c.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.GetFloat64(key)
 }
 
 func (c *ConfigMgr) GetInt(key string) int {
 	c.Lock()
 	defer c.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.GetInt(key)
 }
 
 func (c *ConfigMgr) GetString(key string) string {
 	cfg.Lock()
 	defer cfg.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.GetString(key)
 }
 
 func (c *ConfigMgr) GetDuration(key string) time.Duration {
 	cfg.Lock()
 	defer cfg.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.GetDuration(key)
 }
 
 func (c *ConfigMgr) IsSet(key string) bool {
 	c.Lock()
 	defer c.Unlock()
+	allowLowercaseEnv(key)
 	return c.vcfg.IsSet(key)
+}
+
+// hack to allow lowercase env vars to be read by Viper AutomaticEnv()
+func allowLowercaseEnv(key string) {
+	envKey := "apid_" + key
+	if os.Getenv(envKey) != "" {
+		kUpper := "APID_" + strings.ToUpper(key)
+		os.Setenv(kUpper, os.Getenv(envKey))
+	}
 }
 
 func GetConfig() apid.ConfigService {
