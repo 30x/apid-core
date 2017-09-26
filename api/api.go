@@ -30,7 +30,7 @@ const (
 	configAPIListen         = "api_listen"
 	configExpVarPath        = "api_expvar_path"
 	configReadyPath         = "api_ready"
-	configHealthyPath       = "api_healthy"
+	configHealthPath        = "api_health"
 	ConfigDBMaxConns        = "db_config_max_conns"
 	ConfigDBIdleConns       = "db_config_idle_conns"
 	ConfigDBConnsTimeout    = "db_config_conns_timeout_seconds"
@@ -49,7 +49,7 @@ func CreateService() apid.APIService {
 
 	config.SetDefault(configAPIListen, "127.0.0.1:9000")
 	config.SetDefault(configReadyPath, "/ready")
-	config.SetDefault(configHealthyPath, "/healthy")
+	config.SetDefault(configHealthPath, "/health")
 
 	config.SetDefault(ConfigDBMaxConns, dbDefaultMaxConnsLimit)
 	config.SetDefault(ConfigDBIdleConns, dbDefaultIdleConnsLimit)
@@ -91,8 +91,8 @@ func CreateService() apid.APIService {
 
 	// Set an URL that may be used by infrastructure to test
 	// if the server is working or if it needs to be restarted or replaced
-	if config.GetString(configHealthyPath) != "" {
-		scaffold.SetReadyPath(config.GetString(configHealthyPath))
+	if config.GetString(configHealthPath) != "" {
+		scaffold.SetHealthPath(config.GetString(configHealthPath))
 	}
 
 	return &service{rw, scaffold}
