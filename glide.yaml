@@ -24,6 +24,8 @@ import:
   version: v1.3.0
 - package: github.com/apid/goscaffold
   version: master
+- package: github.com/google/uuid
+  version: v0.2
 testImport:
 - package: github.com/onsi/ginkgo/ginkgo
 - package: github.com/onsi/gomega
