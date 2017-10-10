@@ -29,6 +29,7 @@ const (
 var (
 	APIDInitializedEvent = systemEvent{"apid initialized"}
 	APIListeningEvent    = systemEvent{"api listening"}
+	PluginVersionTracker []PluginData
 
 	pluginInitFuncs []PluginInitFunc
 	services        Services
@@ -67,8 +68,9 @@ func Initialize(s Services) {
 	ss.events.Emit(SystemEventsSelector, APIDInitializedEvent)
 }
 
-func RegisterPlugin(plugin PluginInitFunc) {
+func RegisterPlugin(plugin PluginInitFunc, pluginData PluginData) {
 	pluginInitFuncs = append(pluginInitFuncs, plugin)
+	PluginVersionTracker = append(PluginVersionTracker, pluginData)
 }
 
 func InitializePlugins(versionNumber string) {
