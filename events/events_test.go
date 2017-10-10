@@ -267,17 +267,12 @@ var _ = Describe("Events Service", func() {
 		})
 
 		It("should publish PluginsInitialized event", func(done Done) {
-			xData := make(map[string]interface{})
-			xData["schemaVersion"] = "1.2.3"
+			dummyPluginData := getDummyPluginDataForTest(0);
 			p := func(s apid.Services) (pd apid.PluginData, err error) {
-				pd = apid.PluginData{
-					Name:      "test plugin",
-					Version:   "1.0.0",
-					ExtraData: xData,
-				}
+				pd = dummyPluginData
 				return
 			}
-			apid.RegisterPlugin(p)
+			apid.RegisterPlugin(p, dummyPluginData)
 
 			h := func(event apid.Event) {
 				defer GinkgoRecover()
@@ -286,7 +281,7 @@ var _ = Describe("Events Service", func() {
 
 					Expect(len(pie.Plugins)).Should(Equal(1))
 					p := pie.Plugins[0]
-					Expect(p.Name).To(Equal("test plugin"))
+					Expect(p.Name).To(Equal("test plugin 0"))
 					Expect(p.Version).To(Equal("1.0.0"))
 					Expect(p.ExtraData["schemaVersion"]).To(Equal("1.2.3"))
 
@@ -320,7 +315,7 @@ var _ = Describe("Events Service", func() {
 
 			// create and register plugins, listen to shutdown event
 			for i:=0; i<pluginNum; i++ {
-				apid.RegisterPlugin(createDummyPlugin(i))
+				apid.RegisterPlugin(createDummyPlugin(i), getDummyPluginDataForTest(i))
 				h := func(event apid.Event) {
 					if pie, ok := event.(apid.ShutdownEvent); ok {
 						Expect(pie.Description).Should(Equal("apid is going to shutdown"))
@@ -343,17 +338,12 @@ var _ = Describe("Events Service", func() {
 		})
 
 		It("should be able to read apid version from PluginsInitialized event", func(done Done) {
-			xData := make(map[string]interface{})
-			xData["schemaVersion"] = "1.2.3"
+			dummyPluginData := getDummyPluginDataForTest(0)
 			p := func(s apid.Services) (pd apid.PluginData, err error) {
-				pd = apid.PluginData{
-					Name:      "test plugin",
-					Version:   "1.0.0",
-					ExtraData: xData,
-				}
+				pd = dummyPluginData
 				return
 			}
-			apid.RegisterPlugin(p)
+			apid.RegisterPlugin(p,dummyPluginData)
 
 			apidVersion := "dummy_version"
 
@@ -373,17 +363,20 @@ var _ = Describe("Events Service", func() {
 })
 
 func createDummyPlugin(id int) apid.PluginInitFunc{
-	xData := make(map[string]interface{})
-	xData["schemaVersion"] = "1.2.3"
 	p := func(s apid.Services) (pd apid.PluginData, err error) {
-		pd = apid.PluginData{
-			Name: "test plugin " + strconv.Itoa(id),
-			Version: "1.0.0",
-			ExtraData: xData,
-		}
+		pd = getDummyPluginDataForTest(id)
 		return
 	}
 	return p
+}
+func getDummyPluginDataForTest(id int) apid.PluginData {
+	xData := make(map[string]interface{})
+	xData["schemaVersion"] = "1.2.3"
+	return apid.PluginData{
+		Name:      "test plugin " + strconv.Itoa(id),
+		Version:   "1.0.0",
+		ExtraData: xData,
+	}
 }
 
 type test_handler struct {
