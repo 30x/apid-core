@@ -19,8 +19,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/apid/apid-core/util"
+	"math/rand"
+	"net/http"
 	"regexp"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 var _ = BeforeSuite(func() {
@@ -55,5 +59,107 @@ var _ = Describe("APID utils", func() {
 			Ω(r.MatchString(util.GenerateUUID())).Should(BeTrue())
 			Ω(util.IsValidUUID(util.GenerateUUID())).Should(BeTrue())
 		})
+	})
+
+	Context("Long polling utils", func() {
+		It("DistributeEvents", func() {
+			// make test data
+			deliverChan := make(chan interface{})
+			addSubscriber := make(chan chan interface{})
+			subs := make([]chan interface{}, 50+rand.Intn(50))
+			for i := range subs {
+				subs[i] = make(chan interface{}, 1)
+			}
+
+			// test
+			go util.DistributeEvents(deliverChan, addSubscriber)
+
+			for i := range subs {
+				go func(j int) {
+					addSubscriber <- subs[j]
+				}(i)
+			}
+
+			n := rand.Int()
+			closed := new(int32)
+			go func(c *int32) {
+				for atomic.LoadInt32(c) == 0 {
+					deliverChan <- n
+				}
+			}(closed)
+
+			for i := range subs {
+				Ω(<-subs[i]).Should(Equal(n))
+			}
+			atomic.StoreInt32(closed, 1)
+		}, 2)
+
+		It("Long polling", func(done Done) {
+			// make test data
+			deliverChan := make(chan interface{})
+			addSubscriber := make(chan chan interface{})
+			go util.DistributeEvents(deliverChan, addSubscriber)
+			n := rand.Int()
+			closed := new(int32)
+			successHandler := func(e interface{}, w http.ResponseWriter) {
+				defer GinkgoRecover()
+				Ω(w).Should(BeNil())
+				Ω(e).Should(Equal(n))
+				atomic.StoreInt32(closed, 1)
+				close(done)
+			}
+			timeoutHandler := func(w http.ResponseWriter) {}
+
+			// Long polling
+			go util.LongPolling(nil, time.Minute, addSubscriber, successHandler, timeoutHandler)
+			go func(c *int32) {
+				for atomic.LoadInt32(c) == 0 {
+					deliverChan <- n
+				}
+			}(closed)
+		})
+
+		It("Long polling timeout", func(done Done) {
+			// make test data
+			deliverChan := make(chan interface{})
+			addSubscriber := make(chan chan interface{})
+			go util.DistributeEvents(deliverChan, addSubscriber)
+			successHandler := func(e interface{}, w http.ResponseWriter) {}
+			timeoutHandler := func(w http.ResponseWriter) {
+				defer GinkgoRecover()
+				Ω(w).Should(BeNil())
+				close(done)
+			}
+
+			// Long polling
+			go util.LongPolling(nil, time.Second, addSubscriber, successHandler, timeoutHandler)
+		}, 2)
+
+		It("Debounce", func() {
+			// make test data
+			data := make(map[int]int)
+			inChan := make(chan interface{})
+			outChan := make(chan []interface{})
+			go util.Debounce(inChan, outChan, time.Second)
+			for i := 0; i < 5+rand.Intn(5); i++ {
+				n := rand.Int()
+				data[n]++
+				go func(j int) {
+					inChan <- j
+				}(n)
+			}
+
+			// Debounce
+			e := <-outChan
+			for _, m := range e {
+				num, ok := m.(int)
+				Ω(ok).Should(BeTrue())
+				data[num]--
+			}
+
+			for _, v := range data {
+				Ω(v).Should(BeZero())
+			}
+		}, 2)
 	})
 })
