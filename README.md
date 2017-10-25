@@ -49,6 +49,14 @@ the Log service and some kind of driver (via API or Events), so it's common prac
       // respond to request
     }
 
+## Utils
+apid-core/util package offers common util functions for apid plugins:
+
+* Generate/Validate UUIDs
+* Long Polling
+* Debounce Events
+
+
 ## Running Tests
 
     go test $(glide novendor)
