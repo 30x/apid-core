@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"github.com/apid/apid-core"
 )
 
 const (
@@ -30,8 +29,6 @@ const (
 	configfwdProxyProtocol  =   "configfwdProxyProtocol"
 	configfwdProxyPort      =   "configfwdProxyPort"
 )
-
-var config apid.ConfigService
 
 
 func IsValidUUID(id string) bool {
@@ -43,33 +40,16 @@ func GenerateUUID() string {
 	return uuid.New().String()
 }
 
-// Returns the http.Transport with Forward Proxy params set (if Configured).
-func Transport() *http.Transport {
+
+func Transport(pURL string) *http.Transport {
 	var tr http.Transport
-	var pURL *url.URL
-	var err error
-	// Apigee Forward Proxy
-	fwdPrxy := config.GetString(configfwdProxyURL)
-	fwdPrxyPro := config.GetString(configfwdProxyProtocol)
-	fwdPrxyUser := config.GetString(configfwdProxyUser)
-	fwdPrxyPass := config.GetString(configfwdProxyPasswd)
-	fwdPrxyPort := config.GetString(configfwdProxyPort)
-
-	if fwdPrxy != "" && fwdPrxyPro != "" && fwdPrxyUser != "" && fwdPrxyPort != "" {
-		pURL, err = url.Parse(fwdPrxyPro + "//" + fwdPrxyUser + ":" + fwdPrxyPass + "@" + fwdPrxy + ":" + fwdPrxyPort)
+	if pURL != "" {
+		paURL, err := url.Parse(pURL)
 		if err != nil {
 			panic("Error parsing proxy URL")
 		}
-	} else if fwdPrxy != "" && fwdPrxyPro != "" && fwdPrxyPort != "" {
-		pURL, err = url.Parse(fwdPrxyPro + "//" + fwdPrxy + ":" + fwdPrxyPort)
-		if err != nil {
-			panic("Error parsing proxy URL")
-		}
-	}
-
-	if pURL != nil {
 		tr = http.Transport{
-			Proxy:           http.ProxyURL(pURL),
+			Proxy:           http.ProxyURL(paURL),
 		}
 	} else {
 		tr = http.Transport{
