@@ -272,7 +272,7 @@ var _ = Describe("Data Service", func() {
 
 		It("StructsFromRows", func() {
 			db.Exec(`
-			CREATE TABLE kms_api_product (
+			CREATE TABLE test_table (
 			id text,
 			quota_interval integer,
 			signed_int integer,
@@ -287,7 +287,7 @@ var _ = Describe("Data Service", func() {
 			not_used text,
 			primary key (id)
 			);
-			INSERT INTO "kms_api_product" VALUES(
+			INSERT INTO "test_table" VALUES(
 			'b7e0970c-4677-4b05-8105-5ea59fdcf4e7',
 			1,
 			-1,
@@ -301,7 +301,7 @@ var _ = Describe("Data Service", func() {
 			0.7,
 			'not_used'
 			);
-			INSERT INTO "kms_api_product" VALUES(
+			INSERT INTO "test_table" VALUES(
 			'a7e0970c-4677-4b05-8105-5ea59fdcf4e7',
 			NULL,
 			NULL,
@@ -318,7 +318,7 @@ var _ = Describe("Data Service", func() {
 			`)
 
 			rows, err := db.Query(`
-			SELECT * from "kms_api_product";
+			SELECT * from "test_table";
 			`)
 			Ω(err).Should(Succeed())
 			defer rows.Close()
