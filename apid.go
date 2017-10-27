@@ -18,6 +18,7 @@ import (
 	"errors"
 	"os"
 	"time"
+	"github.com/apid/apid-core/util"
 )
 
 const (
@@ -29,7 +30,6 @@ const (
 	configfwdProxyUser	=   "configfwdproxy_user"
 	configfwdProxyPasswd	=   "configfwdproxy_passwd"
 	configfwdProxyPort      =   "configfwdproxy_port"
-	configfwdProxyPortURL   =   "configcompletefwdp"
 )
 
 var (
@@ -63,7 +63,7 @@ func setFwdProxyConfig(config ConfigService) {
 	} else if fwdPrxy != "" && fwdPrxyPort != "" {
 		pURL = fwdprxyProt + "://" + fwdPrxy + ":" + fwdPrxyPort
 	}
-	config.Set(configfwdProxyPortURL, pURL)
+	config.Set(util.ConfigfwdProxyPortURL, pURL)
 }
 
 type PluginInitFunc func(Services) (PluginData, error)
