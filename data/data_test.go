@@ -244,6 +244,73 @@ var _ = Describe("Data Service", func() {
 			<-finished
 		}
 	}, 10)
+
+	Context("DB", func() {
+		type TestStruct struct {
+			Id            string  `db:"id"`
+			QuotaInterval int64   `db:"quota_interval"`
+			Ratio         float64 `db:"ratio"`
+			CreatedAt     string  `db:"created_at"`
+			UpdatedAt     []byte  `db:"updated_at"`
+		}
+		var db apid.DB
+		var _ = BeforeEach(func() {
+			version := time.Now().String()
+			var err error
+			db, err = apid.Data().DBVersionForID("test", version)
+			Ω(err).Should(Succeed())
+		})
+
+		It("StructsFromRows", func() {
+			db.Exec(`
+			CREATE TABLE kms_api_product (
+			id text,
+			quota_interval integer,
+			created_at blob,
+			created_by text,
+			updated_at blob,
+			ratio float,
+			primary key (id)
+			);
+			INSERT INTO "kms_api_product" VALUES(
+			'b7e0970c-4677-4b05-8105-5ea59fdcf4e7',
+			1,
+			'2017-10-26 22:26:50.153+00:00',
+			'haoming',
+			'2017-10-26 22:26:50.153+00:00',
+			0.5
+			);
+			INSERT INTO "kms_api_product" VALUES(
+			'a7e0970c-4677-4b05-8105-5ea59fdcf4e7',
+			NULL,
+			NULL,
+			'haoming',
+			NULL,
+			NULL
+			);
+			`)
+
+			rows, err := db.Query(`
+			SELECT * from "kms_api_product";
+			`)
+			Ω(err).Should(Succeed())
+			s := []TestStruct{}
+			err = data.StructsFromRows(&s, rows)
+			Ω(err).Should(Succeed())
+			Ω(len(s)).Should(Equal(2))
+			Ω(s[0].Id).Should(Equal("b7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
+			Ω(s[0].QuotaInterval).Should(Equal(int64(1)))
+			Ω(s[0].Ratio).Should(Equal(float64(0.5)))
+			Ω(s[0].CreatedAt).Should(Equal("2017-10-26 22:26:50.153+00:00"))
+			Ω(s[0].UpdatedAt).Should(Equal([]byte("2017-10-26 22:26:50.153+00:00")))
+			Ω(s[1].Id).Should(Equal("a7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
+			Ω(s[1].QuotaInterval).Should(Equal(int64(0)))
+			Ω(s[1].Ratio).Should(Equal(float64(0)))
+			Ω(s[1].CreatedAt).Should(Equal(""))
+			Ω(s[1].UpdatedAt).Should(BeZero())
+		})
+
+	})
 })
 
 func setup(db apid.DB) {

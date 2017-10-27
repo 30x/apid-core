@@ -18,14 +18,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/apid/apid-core"
 	"github.com/apid/apid-core/api"
 	"github.com/apid/apid-core/data/wrap"
 	"github.com/apid/apid-core/logger"
-	"github.com/Sirupsen/logrus"
 	"github.com/mattn/go-sqlite3"
 	"os"
 	"path"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -52,6 +53,7 @@ type dbMapInfo struct {
 
 var dbMap = make(map[string]*dbMapInfo)
 var dbMapSync sync.RWMutex
+var tagFieldMapper = make(map[reflect.Type]map[string]string)
 
 type ApidDb struct {
 	db    *sql.DB
@@ -357,4 +359,108 @@ func logDBInfo(versionedId string, db *sql.DB) chan bool {
 		}
 	}()
 	return stop
+}
+
+// StructsFromRows fill the dest slice with the values of according rows.
+// Each row is marshaled into a struct. The "db" tag in the struct is used for field mapping.
+// It will take care of null value. The supported type mappings from Sqlite3 to Go are:
+// text->string; integer->int64; float->float64; blob->[]byte/string
+func StructsFromRows(dest interface{}, rows *sql.Rows) error {
+	t := reflect.TypeOf(dest)
+	if t == nil {
+		return nil
+	}
+	// type of the struct
+	t = t.Elem().Elem()
+	//build mapper if not existent
+	m, ok := tagFieldMapper[t]
+	if !ok {
+		m = make(map[string]string)
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			m[f.Tag.Get("db")] = f.Name
+		}
+		tagFieldMapper[t] = m
+	}
+
+	colNames, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	colTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return err
+	}
+
+	cols := make([]interface{}, len(colNames))
+	slice := reflect.New(reflect.SliceOf(t)).Elem()
+
+	for i := range cols {
+		switch colTypes[i].DatabaseTypeName() {
+		case "null":
+			cols[i] = new(sql.NullString)
+		case "text":
+			cols[i] = new(sql.NullString)
+		case "integer":
+			cols[i] = new(sql.NullInt64)
+		case "float":
+			cols[i] = new(sql.NullFloat64)
+		case "blob":
+			cols[i] = new([]byte)
+		default:
+			return fmt.Errorf("unsupprted column type: %s", colTypes[i].DatabaseTypeName())
+		}
+	}
+	for rows.Next() {
+		v := reflect.New(t).Elem()
+		err := rows.Scan(cols...)
+		if err != nil {
+			return err
+		}
+		for i := range cols {
+			switch c := cols[i].(type) {
+			case *sql.NullString:
+				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
+					if reflect.TypeOf("").AssignableTo(f.Type()) {
+						f.SetString(c.String)
+					} else {
+						return fmt.Errorf("cannot convert column type %s to field type %s",
+							colTypes[i].DatabaseTypeName(), f.Type().String())
+					}
+				}
+			case *sql.NullInt64:
+				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
+					if reflect.TypeOf(int64(0)).AssignableTo(f.Type()) {
+						f.SetInt(c.Int64)
+					} else {
+						return fmt.Errorf("cannot convert column type %s to field type %s",
+							colTypes[i].DatabaseTypeName(), f.Type().String())
+					}
+				}
+			case *sql.NullFloat64:
+				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
+					if reflect.TypeOf(float64(0)).AssignableTo(f.Type()) {
+						f.SetFloat(c.Float64)
+					} else {
+						return fmt.Errorf("cannot convert column type %s to field type %s",
+							colTypes[i].DatabaseTypeName(), f.Type().String())
+					}
+				}
+			case *[]byte:
+				if f := v.FieldByName(m[colNames[i]]); f.IsValid() {
+					if reflect.TypeOf(*c).AssignableTo(f.Type()) {
+						f.SetBytes(*c)
+					} else if reflect.TypeOf("").AssignableTo(f.Type()) {
+						f.SetString(string(*c))
+					} else {
+						return fmt.Errorf("cannot convert column type %s to field type %s",
+							colTypes[i].DatabaseTypeName(), f.Type().String())
+					}
+				}
+			}
+		}
+		slice = reflect.Append(slice, v)
+	}
+	reflect.ValueOf(dest).Elem().Set(slice)
+	return nil
 }
