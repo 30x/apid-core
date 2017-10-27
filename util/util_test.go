@@ -65,14 +65,13 @@ var _ = Describe("APID utils", func() {
 
 	Context("Forward Proxy Protocol", func() {
 		It("Verify Forward proxying to server works", func() {
-			var maxIdleConnsPerHost = 1
+			var maxIdleConnsPerHost = 10
 			var tr *http.Transport
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
+				Fail("Cant come here, as we have not forwarded request from fwdPrxyServer")
 			}))
 			fwdPrxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-
+				Expect(r.Header.Get("foo")).Should(Equal("bar"))
 			}))
 			tr = util.Transport(fwdPrxyServer.URL)
 			tr.MaxIdleConnsPerHost =  maxIdleConnsPerHost
