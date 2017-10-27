@@ -21,15 +21,7 @@ import (
 	"net/url"
 	"time"
 )
-
-const (
-	configfwdProxyURL	=   "configfwdProxyURL"
-	configfwdProxyUser	=   "configfwdProxyUser"
-	configfwdProxyPasswd	=   "configfwdProxyPasswd"
-	configfwdProxyProtocol  =   "configfwdProxyProtocol"
-	configfwdProxyPort      =   "configfwdProxyPort"
-)
-
+const ConfigfwdProxyPortURL   =   "configcompletefwdp"
 
 func IsValidUUID(id string) bool {
 	_, err := uuid.Parse(id)
