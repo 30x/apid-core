@@ -65,3 +65,8 @@ apid-core/util package offers common util functions for apid plugins:
 This service provides the primitives to perform SQL operations on the database. It also provides the
 provision to alter DB connection pool settings via ConfigDBMaxConns, ConfigDBIdleConns and configDBConnsTimeout configuration parameters. They currently are defaulted to 1000 connections, 1000 connections and 120 seconds respectively.
 More details on this can be found at https://golang.org/pkg/database/sql
+
+## Making http.Client calls through Forward proxy server
+If forward proxy server related parameters are set, util.Transport() will provide the Transport roundtripper with
+the forward proxy parameters set.
+

@@ -18,12 +18,18 @@ import (
 	"errors"
 	"os"
 	"time"
+	"github.com/apid/apid-core/util"
 )
 
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
 	ShutdownTimeout       time.Duration = 10 * time.Second
+	configfwdProxyURL	=   "configfwdproxy_url"
+	configfwdProxyProt	=   "configfwdproxy_prot"
+	configfwdProxyUser	=   "configfwdproxy_user"
+	configfwdProxyPasswd	=   "configfwdproxy_passwd"
+	configfwdProxyPort      =   "configfwdproxy_port"
 )
 
 var (
@@ -43,6 +49,23 @@ type Services interface {
 	Log() LogService
 }
 
+func setFwdProxyConfig(config ConfigService) {
+	var pURL string
+
+	config.SetDefault(configfwdProxyProt, "https")
+	fwdPrxy := config.GetString(configfwdProxyURL)
+	fwdprxyProt := config.GetString(configfwdProxyProt)
+	fwdPrxyUser := config.GetString(configfwdProxyUser)
+	fwdPrxyPass := config.GetString(configfwdProxyPasswd)
+	fwdPrxyPort := config.GetString(configfwdProxyPort)
+	if fwdPrxy != "" && fwdPrxyUser != "" && fwdPrxyPort != "" {
+		pURL = fwdprxyProt + "://" + fwdPrxyUser + ":" + fwdPrxyPass + "@" + fwdPrxy + ":" + fwdPrxyPort
+	} else if fwdPrxy != "" && fwdPrxyPort != "" {
+		pURL = fwdprxyProt + "://" + fwdPrxy + ":" + fwdPrxyPort
+	}
+	config.Set(util.ConfigfwdProxyPortURL, pURL)
+}
+
 type PluginInitFunc func(Services) (PluginData, error)
 
 // passed Services can be a factory - makes copies and maintains returned references
@@ -60,7 +83,7 @@ func Initialize(s Services) {
 	if err := os.MkdirAll(lsp, 0700); err != nil {
 		ss.log.Panicf("can't create local storage path %s: %v", lsp, err)
 	}
-
+	setFwdProxyConfig(ss.config)
 	ss.events = s.Events()
 	ss.api = s.API()
 	ss.data = s.Data()
