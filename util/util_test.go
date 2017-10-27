@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+
+	"net/http/httptest"
 	"github.com/apid/apid-core/util"
 	"math/rand"
 	"net/http"
@@ -59,6 +61,51 @@ var _ = Describe("APID utils", func() {
 			Ω(r.MatchString(util.GenerateUUID())).Should(BeTrue())
 			Ω(util.IsValidUUID(util.GenerateUUID())).Should(BeTrue())
 		})
+	})
+
+	Context("Forward Proxy Protocol", func() {
+		It("Verify Forward proxying to server works", func() {
+			var maxIdleConnsPerHost = 1
+			var tr *http.Transport
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			}))
+			fwdPrxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+
+			}))
+			tr = util.Transport(fwdPrxyServer.URL)
+			tr.MaxIdleConnsPerHost =  maxIdleConnsPerHost
+			var rspcnt int = 0
+			ch := make(chan *http.Response)
+			client := &http.Client{Transport: tr}
+			for i := 0; i < 2*maxIdleConnsPerHost; i++ {
+				go func(client *http.Client) {
+					defer GinkgoRecover()
+					req, err := http.NewRequest("GET", server.URL, nil)
+					req.Header.Set("foo", "bar")
+					resp, err := client.Do(req)
+					if err != nil {
+						Fail("Unable to process Client request")
+					}
+					ch <- resp
+					resp.Body.Close()
+
+				}(client)
+			}
+			for {
+				select {
+				case resp := <-ch:
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					if rspcnt >= 2*maxIdleConnsPerHost-1 {
+						return
+					}
+					rspcnt++
+				default:
+				}
+			}
+
+		}, 3)
 	})
 
 	Context("Long polling utils", func() {
