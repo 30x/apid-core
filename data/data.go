@@ -363,8 +363,9 @@ func logDBInfo(versionedId string, db *sql.DB) chan bool {
 
 // StructsFromRows fill the dest slice with the values of according rows.
 // Each row is marshaled into a struct. The "db" tag in the struct is used for field mapping.
-// It will take care of null value. The supported type mappings from Sqlite3 to Go are:
-// text->string; integer->int64; float->float64; blob->[]byte/string
+// It will take care of null value. Supported type mappings from Sqlite3 to Go are:
+// text->string; integer->int/int64/sql.NullInt64; float->float/float64/sql.NullFloat64;
+// blob->[]byte/string/sql.NullString
 func StructsFromRows(dest interface{}, rows *sql.Rows) error {
 	t := reflect.TypeOf(dest)
 	if t == nil {
@@ -378,7 +379,10 @@ func StructsFromRows(dest interface{}, rows *sql.Rows) error {
 		m = make(map[string]string)
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
-			m[f.Tag.Get("db")] = f.Name
+			if key := f.Tag.Get("db"); key != "" {
+				m[key] = f.Name
+			}
+
 		}
 		tagFieldMapper[t] = m
 	}
@@ -420,27 +424,41 @@ func StructsFromRows(dest interface{}, rows *sql.Rows) error {
 		for i := range cols {
 			switch c := cols[i].(type) {
 			case *sql.NullString:
-				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
-					if reflect.TypeOf("").AssignableTo(f.Type()) {
-						f.SetString(c.String)
+				if f := v.FieldByName(m[colNames[i]]); f.IsValid() {
+					if reflect.TypeOf(*c).AssignableTo(f.Type()) {
+						f.Set(reflect.ValueOf(c).Elem())
+					} else if reflect.TypeOf("").AssignableTo(f.Type()) {
+						if c.Valid {
+							f.SetString(c.String)
+						}
 					} else {
 						return fmt.Errorf("cannot convert column type %s to field type %s",
 							colTypes[i].DatabaseTypeName(), f.Type().String())
 					}
+
 				}
 			case *sql.NullInt64:
-				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
-					if reflect.TypeOf(int64(0)).AssignableTo(f.Type()) {
-						f.SetInt(c.Int64)
+				if f := v.FieldByName(m[colNames[i]]); f.IsValid() {
+					if reflect.TypeOf(*c).AssignableTo(f.Type()) {
+						f.Set(reflect.ValueOf(c).Elem())
+					} else if reflect.TypeOf(int64(0)).ConvertibleTo(f.Type()) {
+						if c.Valid {
+							f.SetInt(c.Int64)
+						}
 					} else {
 						return fmt.Errorf("cannot convert column type %s to field type %s",
 							colTypes[i].DatabaseTypeName(), f.Type().String())
 					}
+
 				}
 			case *sql.NullFloat64:
-				if f := v.FieldByName(m[colNames[i]]); c.Valid && f.IsValid() {
-					if reflect.TypeOf(float64(0)).AssignableTo(f.Type()) {
-						f.SetFloat(c.Float64)
+				if f := v.FieldByName(m[colNames[i]]); f.IsValid() {
+					if reflect.TypeOf(*c).AssignableTo(f.Type()) {
+						f.Set(reflect.ValueOf(c).Elem())
+					} else if reflect.TypeOf(float64(0)).ConvertibleTo(f.Type()) {
+						if c.Valid {
+							f.SetFloat(c.Float64)
+						}
 					} else {
 						return fmt.Errorf("cannot convert column type %s to field type %s",
 							colTypes[i].DatabaseTypeName(), f.Type().String())
@@ -452,6 +470,9 @@ func StructsFromRows(dest interface{}, rows *sql.Rows) error {
 						f.SetBytes(*c)
 					} else if reflect.TypeOf("").AssignableTo(f.Type()) {
 						f.SetString(string(*c))
+					} else if reflect.TypeOf(sql.NullString{}).AssignableTo(f.Type()) {
+						f.FieldByName("String").SetString(string(*c))
+						f.FieldByName("Valid").SetBool(len(*c) > 0)
 					} else {
 						return fmt.Errorf("cannot convert column type %s to field type %s",
 							colTypes[i].DatabaseTypeName(), f.Type().String())

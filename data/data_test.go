@@ -15,6 +15,7 @@
 package data_test
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/apid/apid-core"
 	"github.com/apid/apid-core/data"
@@ -245,13 +246,21 @@ var _ = Describe("Data Service", func() {
 		}
 	}, 10)
 
-	Context("DB", func() {
+	Context("StructsFromRows", func() {
 		type TestStruct struct {
-			Id            string  `db:"id"`
-			QuotaInterval int64   `db:"quota_interval"`
-			Ratio         float64 `db:"ratio"`
-			CreatedAt     string  `db:"created_at"`
-			UpdatedAt     []byte  `db:"updated_at"`
+			Id            string          `db:"id"`
+			QuotaInterval int64           `db:"quota_interval"`
+			SignedInt     int             `db:"signed_int"`
+			SqlInt        sql.NullInt64   `db:"sql_int"`
+			Ratio         float64         `db:"ratio"`
+			ShortFloat    float32         `db:"short_float"`
+			SqlFloat      sql.NullFloat64 `db:"sql_float"`
+			CreatedAt     string          `db:"created_at"`
+			CreatedBy     sql.NullString  `db:"created_by"`
+			UpdatedAt     []byte          `db:"updated_at"`
+			StringBlob    sql.NullString  `db:"string_blob"`
+			NotInDb       string          `db:"not_in_db"`
+			NotUsed       string
 		}
 		var db apid.DB
 		var _ = BeforeEach(func() {
@@ -266,25 +275,43 @@ var _ = Describe("Data Service", func() {
 			CREATE TABLE kms_api_product (
 			id text,
 			quota_interval integer,
+			signed_int integer,
+			sql_int integer,
 			created_at blob,
 			created_by text,
 			updated_at blob,
+			string_blob blob,
 			ratio float,
+			short_float float,
+			sql_float float,
+			not_used text,
 			primary key (id)
 			);
 			INSERT INTO "kms_api_product" VALUES(
 			'b7e0970c-4677-4b05-8105-5ea59fdcf4e7',
 			1,
+			-1,
+			-2,
 			'2017-10-26 22:26:50.153+00:00',
 			'haoming',
 			'2017-10-26 22:26:50.153+00:00',
-			0.5
+			'2017-10-26 22:26:50.153+00:00',
+			0.5,
+			0.6,
+			0.7,
+			'not_used'
 			);
 			INSERT INTO "kms_api_product" VALUES(
 			'a7e0970c-4677-4b05-8105-5ea59fdcf4e7',
 			NULL,
 			NULL,
-			'haoming',
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			NULL,
 			NULL,
 			NULL
 			);
@@ -294,20 +321,38 @@ var _ = Describe("Data Service", func() {
 			SELECT * from "kms_api_product";
 			`)
 			Ω(err).Should(Succeed())
+			defer rows.Close()
 			s := []TestStruct{}
 			err = data.StructsFromRows(&s, rows)
 			Ω(err).Should(Succeed())
 			Ω(len(s)).Should(Equal(2))
 			Ω(s[0].Id).Should(Equal("b7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
 			Ω(s[0].QuotaInterval).Should(Equal(int64(1)))
+			Ω(s[0].SignedInt).Should(Equal(int(-1)))
+			Ω(s[0].SqlInt).Should(Equal(sql.NullInt64{-2, true}))
 			Ω(s[0].Ratio).Should(Equal(float64(0.5)))
+			Ω(s[0].ShortFloat).Should(Equal(float32(0.6)))
+			Ω(s[0].SqlFloat).Should(Equal(sql.NullFloat64{0.7, true}))
 			Ω(s[0].CreatedAt).Should(Equal("2017-10-26 22:26:50.153+00:00"))
+			Ω(s[0].CreatedBy).Should(Equal(sql.NullString{"haoming", true}))
 			Ω(s[0].UpdatedAt).Should(Equal([]byte("2017-10-26 22:26:50.153+00:00")))
+			Ω(s[0].StringBlob).Should(Equal(sql.NullString{"2017-10-26 22:26:50.153+00:00", true}))
+			Ω(s[0].NotInDb).Should(BeZero())
+			Ω(s[0].NotUsed).Should(BeZero())
+
 			Ω(s[1].Id).Should(Equal("a7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
-			Ω(s[1].QuotaInterval).Should(Equal(int64(0)))
-			Ω(s[1].Ratio).Should(Equal(float64(0)))
-			Ω(s[1].CreatedAt).Should(Equal(""))
+			Ω(s[1].QuotaInterval).Should(BeZero())
+			Ω(s[1].SignedInt).Should(BeZero())
+			Ω(s[1].SignedInt).Should(BeZero())
+			Ω(s[1].Ratio).Should(BeZero())
+			Ω(s[1].ShortFloat).Should(BeZero())
+			Ω(s[1].SqlFloat).Should(BeZero())
+			Ω(s[1].CreatedAt).Should(BeZero())
+			Ω(s[1].CreatedBy.Valid).Should(BeFalse())
 			Ω(s[1].UpdatedAt).Should(BeZero())
+			Ω(s[1].StringBlob.Valid).Should(BeFalse())
+			Ω(s[1].NotInDb).Should(BeZero())
+			Ω(s[1].NotUsed).Should(BeZero())
 		})
 
 	})
