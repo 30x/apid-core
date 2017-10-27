@@ -92,6 +92,16 @@ func (d *ApidDb) QueryRow(query string, args ...interface{}) *sql.Row {
 	return d.db.QueryRow(query, args...)
 }
 
+func (d *ApidDb) QueryStructs(dest interface{}, query string, args ...interface{}) error {
+	rows, err := d.db.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	err = StructsFromRows(dest, rows)
+	return err
+}
+
 func (d *ApidDb) Begin() (apid.Tx, error) {
 	d.mutex.Lock()
 	tx, err := d.db.Begin()
@@ -158,6 +168,16 @@ func (tx *Tx) Stmt(stmt *sql.Stmt) *sql.Stmt {
 }
 func (tx *Tx) StmtContext(ctx context.Context, stmt *sql.Stmt) *sql.Stmt {
 	return tx.tx.StmtContext(ctx, stmt)
+}
+
+func (tx *Tx) QueryStructs(dest interface{}, query string, args ...interface{}) error {
+	rows, err := tx.tx.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	err = StructsFromRows(dest, rows)
+	return err
 }
 
 func CreateDataService() apid.DataService {

@@ -263,16 +263,13 @@ var _ = Describe("Data Service", func() {
 			NotUsed       string
 		}
 		var db apid.DB
-		var _ = BeforeEach(func() {
+		BeforeEach(func() {
 			version := time.Now().String()
 			var err error
 			db, err = apid.Data().DBVersionForID("test", version)
 			Ω(err).Should(Succeed())
-		})
-
-		It("StructsFromRows", func() {
-			db.Exec(`
-			CREATE TABLE test_table (
+			_, err = db.Exec(`
+			CREATE TABLE IF NOT EXISTS test_table (
 			id text,
 			quota_interval integer,
 			signed_int integer,
@@ -316,15 +313,17 @@ var _ = Describe("Data Service", func() {
 			NULL
 			);
 			`)
+			Ω(err).Should(Succeed())
+		})
 
-			rows, err := db.Query(`
-			SELECT * from "test_table";
+		AfterEach(func() {
+			_, err := db.Exec(`
+			DROP TABLE IF EXISTS test_table;
 			`)
 			Ω(err).Should(Succeed())
-			defer rows.Close()
-			s := []TestStruct{}
-			err = data.StructsFromRows(&s, rows)
-			Ω(err).Should(Succeed())
+		})
+
+		verifyResult := func(s []TestStruct) {
 			Ω(len(s)).Should(Equal(2))
 			Ω(s[0].Id).Should(Equal("b7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
 			Ω(s[0].QuotaInterval).Should(Equal(int64(1)))
@@ -353,6 +352,39 @@ var _ = Describe("Data Service", func() {
 			Ω(s[1].StringBlob.Valid).Should(BeFalse())
 			Ω(s[1].NotInDb).Should(BeZero())
 			Ω(s[1].NotUsed).Should(BeZero())
+		}
+
+		It("StructsFromRows", func() {
+			rows, err := db.Query(`
+			SELECT * from "test_table";
+			`)
+			Ω(err).Should(Succeed())
+			defer rows.Close()
+			s := []TestStruct{}
+			err = data.StructsFromRows(&s, rows)
+			Ω(err).Should(Succeed())
+			verifyResult(s)
+		})
+
+		It("DB.QueryStructs", func() {
+			s := []TestStruct{}
+			err := db.QueryStructs(&s, `
+			SELECT * from "test_table";
+			`)
+			Ω(err).Should(Succeed())
+			verifyResult(s)
+		})
+
+		It("Tx.QueryStructs", func() {
+			s := []TestStruct{}
+			tx, err := db.Begin()
+			Ω(err).Should(Succeed())
+			err = tx.QueryStructs(&s, `
+			SELECT * from "test_table";
+			`)
+			Ω(err).Should(Succeed())
+			Ω(tx.Commit()).Should(Succeed())
+			verifyResult(s)
 		})
 
 	})

@@ -44,6 +44,7 @@ type DB interface {
 	SetConnMaxLifetime(d time.Duration)
 	SetMaxIdleConns(n int)
 	SetMaxOpenConns(n int)
+	QueryStructs(dest interface{}, query string, args ...interface{}) error
 	//Close() error
 	//Stats() sql.DBStats
 	//Driver() driver.Driver
@@ -62,4 +63,5 @@ type Tx interface {
 	Rollback() error
 	Stmt(stmt *sql.Stmt) *sql.Stmt
 	StmtContext(ctx context.Context, stmt *sql.Stmt) *sql.Stmt
+	QueryStructs(dest interface{}, query string, args ...interface{}) error
 }
