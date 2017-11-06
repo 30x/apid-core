@@ -72,6 +72,7 @@ var _ = Describe("APID utils", func() {
 			}))
 			fwdPrxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.Header.Get("foo")).Should(Equal("bar"))
+				w.Header().Set("bar", "foo")
 			}))
 			tr = util.Transport(fwdPrxyServer.URL)
 			tr.MaxIdleConnsPerHost =  maxIdleConnsPerHost
@@ -82,26 +83,24 @@ var _ = Describe("APID utils", func() {
 				go func(client *http.Client) {
 					defer GinkgoRecover()
 					req, err := http.NewRequest("GET", server.URL, nil)
+					Expect(err).Should(Succeed())
 					req.Header.Set("foo", "bar")
 					resp, err := client.Do(req)
 					if err != nil {
 						Fail("Unable to process Client request")
 					}
-					ch <- resp
+					Expect(resp.Header.Get("bar")).Should(Equal("foo"))
 					resp.Body.Close()
-
+					ch <- resp
 				}(client)
 			}
 			for {
-				select {
-				case resp := <-ch:
-					Expect(resp.StatusCode).To(Equal(http.StatusOK))
-					if rspcnt >= 2*maxIdleConnsPerHost-1 {
-						return
-					}
-					rspcnt++
-				default:
+				resp := <-ch
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				if rspcnt >= 2*maxIdleConnsPerHost-1 {
+					return
 				}
+				rspcnt++
 			}
 
 		}, 3)

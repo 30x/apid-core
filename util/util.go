@@ -32,7 +32,7 @@ func GenerateUUID() string {
 	return uuid.New().String()
 }
 
-
+// Helper method that initializes the roundtripper based on the configuration parameters.
 func Transport(pURL string) *http.Transport {
 	var tr http.Transport
 	if pURL != "" {
@@ -42,9 +42,6 @@ func Transport(pURL string) *http.Transport {
 		}
 		tr = http.Transport{
 			Proxy:           http.ProxyURL(paURL),
-		}
-	} else {
-		tr = http.Transport{
 		}
 	}
 	return &tr
