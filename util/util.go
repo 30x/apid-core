@@ -14,11 +14,14 @@
 
 package util
 
+
 import (
 	"github.com/google/uuid"
 	"net/http"
+	"net/url"
 	"time"
 )
+const ConfigfwdProxyPortURL   =   "configcompletefwdp"
 
 func IsValidUUID(id string) bool {
 	_, err := uuid.Parse(id)
@@ -27,6 +30,21 @@ func IsValidUUID(id string) bool {
 
 func GenerateUUID() string {
 	return uuid.New().String()
+}
+
+// Helper method that initializes the roundtripper based on the configuration parameters.
+func Transport(pURL string) *http.Transport {
+	var tr http.Transport
+	if pURL != "" {
+		paURL, err := url.Parse(pURL)
+		if err != nil {
+			panic("Error parsing proxy URL")
+		}
+		tr = http.Transport{
+			Proxy:           http.ProxyURL(paURL),
+		}
+	}
+	return &tr
 }
 
 // distributeEvents() receives elements from deliverChan, and send them to subscribers

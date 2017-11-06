@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+
+	"net/http/httptest"
 	"github.com/apid/apid-core/util"
 	"math/rand"
 	"net/http"
@@ -59,6 +61,47 @@ var _ = Describe("APID utils", func() {
 			Ω(r.MatchString(util.GenerateUUID())).Should(BeTrue())
 			Ω(util.IsValidUUID(util.GenerateUUID())).Should(BeTrue())
 		})
+	})
+
+	Context("Forward Proxy Protocol", func() {
+		It("Verify Forward proxying to server works", func() {
+			var maxIdleConnsPerHost = 10
+			var tr *http.Transport
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Fail("Cant come here, as we have not forwarded request from fwdPrxyServer")
+			}))
+			fwdPrxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.Header.Get("foo")).Should(Equal("bar"))
+				w.Header().Set("bar", "foo")
+			}))
+			tr = util.Transport(fwdPrxyServer.URL)
+			tr.MaxIdleConnsPerHost =  maxIdleConnsPerHost
+			var rspcnt int = 0
+			ch := make(chan *http.Response)
+			client := &http.Client{Transport: tr}
+			for i := 0; i < 2*maxIdleConnsPerHost; i++ {
+				go func(client *http.Client) {
+					defer GinkgoRecover()
+					req, err := http.NewRequest("GET", server.URL, nil)
+					Expect(err).Should(Succeed())
+					req.Header.Set("foo", "bar")
+					resp, err := client.Do(req)
+					Expect(err).Should(Succeed())
+					Expect(resp.Header.Get("bar")).Should(Equal("foo"))
+					resp.Body.Close()
+					ch <- resp
+				}(client)
+			}
+			for {
+				resp := <-ch
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				if rspcnt >= 2*maxIdleConnsPerHost-1 {
+					return
+				}
+				rspcnt++
+			}
+
+		}, 3)
 	})
 
 	Context("Long polling utils", func() {
