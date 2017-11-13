@@ -16,20 +16,20 @@ package apid
 
 import (
 	"errors"
+	"github.com/apid/apid-core/util"
 	"os"
 	"time"
-	"github.com/apid/apid-core/util"
 )
 
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
 	ShutdownTimeout       time.Duration = 10 * time.Second
-	configfwdProxyURL	=   "configfwdproxy_url"
-	configfwdProxyProt	=   "configfwdproxy_prot"
-	configfwdProxyUser	=   "configfwdproxy_user"
-	configfwdProxyPasswd	=   "configfwdproxy_passwd"
-	configfwdProxyPort      =   "configfwdproxy_port"
+	configfwdProxyURL                   = "configfwdproxy_url"
+	configfwdProxyProt                  = "configfwdproxy_prot"
+	configfwdProxyUser                  = "configfwdproxy_user"
+	configfwdProxyPasswd                = "configfwdproxy_passwd"
+	configfwdProxyPort                  = "configfwdproxy_port"
 )
 
 var (
@@ -51,7 +51,6 @@ type Services interface {
 
 func setFwdProxyConfig(config ConfigService) {
 	var pURL string
-
 	config.SetDefault(configfwdProxyProt, "https")
 	fwdPrxy := config.GetString(configfwdProxyURL)
 	fwdprxyProt := config.GetString(configfwdProxyProt)
@@ -83,6 +82,12 @@ func Initialize(s Services) {
 	if err := os.MkdirAll(lsp, 0700); err != nil {
 		ss.log.Panicf("can't create local storage path %s: %v", lsp, err)
 	}
+
+	if val, ok := os.LookupEnv(configfwdProxyPasswd); ok {
+		ss.config.Set(configfwdProxyPasswd, val)
+		ss.log.Debug("Got forward proxy password from env vars")
+	}
+
 	setFwdProxyConfig(ss.config)
 	ss.events = s.Events()
 	ss.api = s.API()
