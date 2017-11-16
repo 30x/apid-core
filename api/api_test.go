@@ -15,12 +15,12 @@
 package api_test
 
 import (
+	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/url"
-	"net/http"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
+	"net/url"
 )
 
 var _ = Describe("API Service", func() {

@@ -31,6 +31,8 @@ const (
 	configExpVarPath        = "api_expvar_path"
 	configReadyPath         = "api_ready"
 	configHealthPath        = "api_health"
+	configTlsKey            = "api_tls_key"
+	configTlsCert           = "api_tls_cert"
 	ConfigDBMaxConns        = "db_config_max_conns"
 	ConfigDBIdleConns       = "db_config_idle_conns"
 	ConfigDBConnsTimeout    = "db_config_conns_timeout_seconds"
@@ -81,7 +83,17 @@ func CreateService() apid.APIService {
 	if ip != nil {
 		scaffold.SetlocalBindIPAddressV4(ip)
 	}
-	scaffold.SetInsecurePort(port)
+
+	// listen on https
+	if key, cert := config.GetString(configTlsKey), config.GetString(configTlsCert); key != "" && cert != "" {
+		log.Infof("Load TLS key: %v, TLS cert: %v", key, cert)
+		scaffold.SetSecurePort(port)
+		scaffold.SetKeyFile(key)
+		scaffold.SetCertFile(cert)
+	} else { // listen on http
+		scaffold.SetInsecurePort(port)
+	}
+
 	scaffold.CatchSignals()
 
 	// Set an URL that may be used by a load balancer to test if the server is ready to handle requests
