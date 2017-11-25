@@ -18,11 +18,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-
-	"net/http/httptest"
 	"github.com/apid/apid-core/util"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"sync/atomic"
 	"testing"
@@ -75,7 +74,7 @@ var _ = Describe("APID utils", func() {
 				w.Header().Set("bar", "foo")
 			}))
 			tr = util.Transport(fwdPrxyServer.URL)
-			tr.MaxIdleConnsPerHost =  maxIdleConnsPerHost
+			tr.MaxIdleConnsPerHost = maxIdleConnsPerHost
 			var rspcnt int = 0
 			ch := make(chan *http.Response)
 			client := &http.Client{Transport: tr}

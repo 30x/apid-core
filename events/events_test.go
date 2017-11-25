@@ -267,7 +267,7 @@ var _ = Describe("Events Service", func() {
 		})
 
 		It("should publish PluginsInitialized event", func(done Done) {
-			dummyPluginData := getDummyPluginDataForTest(0);
+			dummyPluginData := getDummyPluginDataForTest(0)
 			p := func(s apid.Services) (pd apid.PluginData, err error) {
 				pd = dummyPluginData
 				return
@@ -304,7 +304,7 @@ var _ = Describe("Events Service", func() {
 				}
 			}
 			apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
-			<- apid.Events().Emit(apid.ShutdownEventSelector, apid.ShutdownEvent{"apid is going to shutdown"})
+			<-apid.Events().Emit(apid.ShutdownEventSelector, apid.ShutdownEvent{Description: "apid is going to shutdown"})
 			close(done)
 		})
 
@@ -314,7 +314,7 @@ var _ = Describe("Events Service", func() {
 			countP := &count
 
 			// create and register plugins, listen to shutdown event
-			for i:=0; i<pluginNum; i++ {
+			for i := 0; i < pluginNum; i++ {
 				apid.RegisterPlugin(createDummyPlugin(i), getDummyPluginDataForTest(i))
 				h := func(event apid.Event) {
 					if pie, ok := event.(apid.ShutdownEvent); ok {
@@ -326,7 +326,6 @@ var _ = Describe("Events Service", func() {
 				}
 				apid.Events().ListenFunc(apid.ShutdownEventSelector, h)
 			}
-
 
 			apid.InitializePlugins("")
 
@@ -343,7 +342,7 @@ var _ = Describe("Events Service", func() {
 				pd = dummyPluginData
 				return
 			}
-			apid.RegisterPlugin(p,dummyPluginData)
+			apid.RegisterPlugin(p, dummyPluginData)
 
 			apidVersion := "dummy_version"
 
@@ -362,7 +361,7 @@ var _ = Describe("Events Service", func() {
 	})
 })
 
-func createDummyPlugin(id int) apid.PluginInitFunc{
+func createDummyPlugin(id int) apid.PluginInitFunc {
 	p := func(s apid.Services) (pd apid.PluginData, err error) {
 		pd = getDummyPluginDataForTest(id)
 		return

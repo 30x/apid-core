@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/apid/apid-core"
 	"github.com/Sirupsen/logrus"
+	"github.com/apid/apid-core"
 )
 
 const (
