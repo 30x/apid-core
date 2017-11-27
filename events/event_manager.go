@@ -15,8 +15,8 @@
 package events
 
 import (
-	"sync"
 	"reflect"
+	"sync"
 
 	"github.com/apid/apid-core"
 )

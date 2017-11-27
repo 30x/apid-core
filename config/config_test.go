@@ -15,10 +15,10 @@
 package config_test
 
 import (
+	"github.com/apid/apid-core"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"os"
-	"github.com/apid/apid-core"
 	"time"
 )
 

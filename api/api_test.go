@@ -15,12 +15,12 @@
 package api_test
 
 import (
+	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/url"
-	"net/http"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
+	"net/url"
 )
 
 var _ = Describe("API Service", func() {
@@ -32,8 +32,8 @@ var _ = Describe("API Service", func() {
 		uri.Path = "/exp/vars"
 
 		resp, err := http.Get(uri.String())
-		defer resp.Body.Close()
 		Expect(err).ShouldNot(HaveOccurred())
+		defer resp.Body.Close()
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 
 		body, err := ioutil.ReadAll(resp.Body)

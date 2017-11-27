@@ -14,14 +14,14 @@
 
 package util
 
-
 import (
 	"github.com/google/uuid"
 	"net/http"
 	"net/url"
 	"time"
 )
-const ConfigfwdProxyPortURL   =   "configcompletefwdp"
+
+const ConfigfwdProxyPortURL = "configcompletefwdp"
 
 func IsValidUUID(id string) bool {
 	_, err := uuid.Parse(id)
@@ -41,7 +41,7 @@ func Transport(pURL string) *http.Transport {
 			panic("Error parsing proxy URL")
 		}
 		tr = http.Transport{
-			Proxy:           http.ProxyURL(paURL),
+			Proxy: http.ProxyURL(paURL),
 		}
 	}
 	return &tr

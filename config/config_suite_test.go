@@ -18,16 +18,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
 	"github.com/apid/apid-core"
 	"github.com/apid/apid-core/factory"
+	"testing"
 )
 
 var _ = BeforeSuite(func() {
 	apid.Initialize(factory.DefaultServicesFactory())
 	apid.Config().SetDefault("test", "test")
 })
-
 
 func TestEvents(t *testing.T) {
 	RegisterFailHandler(Fail)

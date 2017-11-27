@@ -16,20 +16,20 @@ package apid
 
 import (
 	"errors"
+	"github.com/apid/apid-core/util"
 	"os"
 	"time"
-	"github.com/apid/apid-core/util"
 )
 
 const (
 	SystemEventsSelector  EventSelector = "system event"
 	ShutdownEventSelector EventSelector = "shutdown event"
 	ShutdownTimeout       time.Duration = 10 * time.Second
-	configfwdProxyURL	=   "configfwdproxy_url"
-	configfwdProxyProt	=   "configfwdproxy_prot"
-	configfwdProxyUser	=   "configfwdproxy_user"
-	configfwdProxyPasswd	=   "configfwdproxy_passwd"
-	configfwdProxyPort      =   "configfwdproxy_port"
+	configfwdProxyURL                   = "configfwdproxy_url"
+	configfwdProxyProt                  = "configfwdproxy_prot"
+	configfwdProxyUser                  = "configfwdproxy_user"
+	configfwdProxyPasswd                = "configfwdproxy_passwd"
+	configfwdProxyPort                  = "configfwdproxy_port"
 )
 
 var (

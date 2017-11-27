@@ -1,5 +1,7 @@
 # apid-core
 
+[![Build Status](https://travis-ci.org/apid/apid-core.svg)](https://travis-ci.org/apid/apid-core) [![GoDoc](https://godoc.org/github.com/apid/apid-core?status.svg)](https://godoc.org/github.com/apid/apid-core) [![Go Report Card](https://goreportcard.com/badge/github.com/apid/apid-core)](https://goreportcard.com/report/github.com/apid/apid-core)
+
 apid-core is a library that provides a container for publishing APIs that provides core services to its plugins 
 including configuration, API publishing, data access, and a local pub/sub event system.
 

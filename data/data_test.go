@@ -49,7 +49,7 @@ var _ = Describe("Data Service", func() {
 		_, err = apid.Data().DBVersionForID("common", "base")
 		Expect(err).To(HaveOccurred())
 	})
-	It("should be able to change versions of a datbase", func() {
+	It("should be able to change versions of a database", func() {
 		var versions []string
 		var dbs []apid.DB
 
@@ -328,14 +328,14 @@ var _ = Describe("Data Service", func() {
 			Ω(s[0].Id).Should(Equal("b7e0970c-4677-4b05-8105-5ea59fdcf4e7"))
 			Ω(s[0].QuotaInterval).Should(Equal(int64(1)))
 			Ω(s[0].SignedInt).Should(Equal(int(-1)))
-			Ω(s[0].SqlInt).Should(Equal(sql.NullInt64{-2, true}))
+			Ω(s[0].SqlInt).Should(Equal(sql.NullInt64{Int64: -2, Valid: true}))
 			Ω(s[0].Ratio).Should(Equal(float64(0.5)))
 			Ω(s[0].ShortFloat).Should(Equal(float32(0.6)))
-			Ω(s[0].SqlFloat).Should(Equal(sql.NullFloat64{0.7, true}))
+			Ω(s[0].SqlFloat).Should(Equal(sql.NullFloat64{Float64: 0.7, Valid: true}))
 			Ω(s[0].CreatedAt).Should(Equal("2017-10-26 22:26:50.153+00:00"))
-			Ω(s[0].CreatedBy).Should(Equal(sql.NullString{"haoming", true}))
+			Ω(s[0].CreatedBy).Should(Equal(sql.NullString{String: "haoming", Valid: true}))
 			Ω(s[0].UpdatedAt).Should(Equal([]byte("2017-10-26 22:26:50.153+00:00")))
-			Ω(s[0].StringBlob).Should(Equal(sql.NullString{"2017-10-26 22:26:50.153+00:00", true}))
+			Ω(s[0].StringBlob).Should(Equal(sql.NullString{String: "2017-10-26 22:26:50.153+00:00", Valid: true}))
 			Ω(s[0].NotInDb).Should(BeZero())
 			Ω(s[0].NotUsed).Should(BeZero())
 
