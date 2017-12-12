@@ -204,4 +204,11 @@ var _ = Describe("APID utils", func() {
 			}
 		}, 2)
 	})
+
+	It("Contains", func() {
+		Expect(util.Contains([]string{"foo", "bar"}, "foo")).Should(BeTrue())
+		Expect(util.Contains([]string{"foo", "bar"}, "bar")).Should(BeTrue())
+		Expect(util.Contains([]string{"foo", "bar"}, "xxx")).Should(BeFalse())
+		Expect(util.Contains([]string{}, "foo")).Should(BeFalse())
+	})
 })

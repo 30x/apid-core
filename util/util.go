@@ -116,3 +116,13 @@ func Debounce(inChan chan interface{}, outChan chan []interface{}, window time.D
 		}
 	}
 }
+
+// Contains return whether the target string is found in the slice.
+func Contains(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}
