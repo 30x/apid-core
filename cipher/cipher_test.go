@@ -83,18 +83,6 @@ var _ = Describe("APID Cipher", func() {
 			})
 		})
 
-		It("SetKey", func() {
-			key := make([]byte, 16)
-			plaintext := []byte("aUWQKgAwmaR0p2kY")
-			ciphertext := []byte{218, 53, 247, 87, 119, 80, 231, 16, 125, 11, 214, 101, 246, 202, 178, 163, 202, 102, 146, 245, 79, 215, 74, 228, 17, 83, 213, 134, 105, 203, 31, 14}
-			c, err := cipher.CreateAesCipher(key)
-			Expect(err).Should(Succeed())
-			key = []byte{2, 122, 212, 83, 150, 164, 180, 4, 148, 242, 65, 189, 3, 188, 76, 247}
-			Expect(c.SetKey(key)).Should(Succeed())
-			Expect(c.Encrypt(plaintext, cipher.ModeEcb, cipher.PaddingPKCS5)).Should(Equal(ciphertext))
-			Expect(c.Decrypt(ciphertext, cipher.ModeEcb, cipher.PaddingPKCS7)).Should(Equal(plaintext))
-		})
-
 		It("Invalid Parameters", func() {
 			_, err := cipher.CreateAesCipher(make([]byte, 15))
 			Expect(err).ToNot(Succeed())

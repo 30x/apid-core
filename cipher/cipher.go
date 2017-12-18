@@ -17,7 +17,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"fmt"
-	"sync"
 )
 
 type Mode string
@@ -72,28 +71,17 @@ func (p Padding) strip(input []byte) (output []byte) {
 // Create a new AesCipher object with the specified encryption mode and padding algorithm.
 func CreateAesCipher(key []byte) (*AesCipher, error) {
 	a := &AesCipher{
-		mutex: &sync.RWMutex{},
+		key: key,
 	}
-	if err := a.SetKey(key); err != nil {
-		return nil, err
-	}
-	return a, nil
+	var err error
+	a.block, err = aes.NewCipher(key)
+	return a, err
 }
 
 // An object to perform AES encryption/decryption.
 type AesCipher struct {
 	key   []byte
 	block cipher.Block
-	mutex *sync.RWMutex
-}
-
-// Set/Change the AES key, accepted key's bit-size is 128/192/256.
-func (a *AesCipher) SetKey(key []byte) (err error) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-	a.key = key
-	a.block, err = aes.NewCipher(key)
-	return err
 }
 
 // Encrypt the plaintext. Padding is performed before encryption, so the
@@ -116,15 +104,11 @@ func (a *AesCipher) Encrypt(plaintext []byte, mode Mode, padding Padding) (ciphe
 	ciphertext = text
 
 	// encrypt
-	a.mutex.RLock()
-	block := a.block
-	a.mutex.RUnlock()
-
 	switch mode {
 	case ModeEcb:
-		size := block.BlockSize()
+		size := a.block.BlockSize()
 		for len(text) > 0 {
-			block.Encrypt(text, text)
+			a.block.Encrypt(text, text)
 			text = text[size:]
 		}
 	}
@@ -148,9 +132,7 @@ func (a *AesCipher) Decrypt(ciphertext []byte, mode Mode, padding Padding) (plai
 	}
 
 	// encrypt
-	a.mutex.RLock()
 	block := a.block
-	a.mutex.RUnlock()
 
 	switch mode {
 	case ModeEcb:
